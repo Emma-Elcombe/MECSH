@@ -9,14 +9,14 @@ This will cover
  5. ASM survey      - source: Survey Gizmo
  
  
-# Folder Sturcture
+## Folder Structure
 
 This project runs in "C:/Users/Tresi-Emma/Documents/R for MECSH/MECSH"
 
 Inside folder 'R for MECSH' are the following folders
-  MECSH     - contains code
-  Reference - contains reference input files, eg 'sites'
-  Load      - contains files to be loaded into R
-  Archive   - contains files whch have been used are now held for backup only
-  Log       - Contains log file/s
+  +MECSH     - contains code
+  +Reference - contains reference input files, eg 'sites'
+  +Load      - contains files to be loaded into R
+  +Archive   - contains files whch have been used are now held for backup only
+  +Log       - Contains log file/s
   
