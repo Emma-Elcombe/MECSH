@@ -30,7 +30,7 @@ log_and_quit <- function() {
   flog.error("Fatal Error: %s", err_msg, name='logger.c')
   setwd("C:/Users/Tresi-Emma/Documents/Interfaces")
   flog.appender(appender.file("PSQ_fetch.txt"), name='logger.a')
-  flog.error("Failure", name='logger.a')
+  flog.info("Failure", name='logger.a')
   setwd("C:/Users/Tresi-Emma/Desktop")
   flog.appender(appender.file("PSQ FETCH FAILED.log"), name='logger.b')
   flog.error("PSQ Fetch failed: %s", err_msg, name='logger.b')
@@ -512,9 +512,9 @@ Extract_Load_Data <- function(){
     flog.info("data in correct range", name='logger.c')
   }
   
-  # add todays date
+  # set todays date
   todays_date <- as.character(Sys.Date())
-  merged <- data.frame(merged[c(1:22)],todays_date)
+
   
   # Clean up
   flog.trace("clean up files", name='logger.c')
