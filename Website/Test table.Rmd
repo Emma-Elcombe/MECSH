@@ -1,0 +1,9 @@
+
+#Load Sites file
+
+```{r}
+library(readxl)
+setwd("C:/Users/Tresi-Emma/Documents/R for MECSH")
+sites <- read_excel("Reference/sitesGizmo.xlsx", sheet = "sites")
+sites
+```
