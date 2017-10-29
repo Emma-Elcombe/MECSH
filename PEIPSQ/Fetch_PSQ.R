@@ -513,8 +513,8 @@ Extract_Load_Data <- function(){
   }
   
   # add todays date
-  todays_date <- as.character(Sys.Date())
-  merged <- data.frame(merged[c(1:22)],todays_date)
+  extract_date <- as.character(Sys.Date())
+  merged <- data.frame(merged[c(1:22)],extract_date)
   
   # Clean up
   flog.trace("clean up files", name='logger.c')
@@ -531,7 +531,7 @@ Extract_Load_Data <- function(){
   flog.info("File %s saved into Load folder", PSQ_file_name, name='logger.c')
   
   # export PSQ data to archive folder
-  PSQ_file_name <- paste("Archive/PSQ_Data ", todays_date,".csv", sep = "")
+  PSQ_file_name <- paste("Archive/PSQ_Data ", extract_date,".csv", sep = "")
   write.table(merged, file = PSQ_file_name, sep="\t", row.names = FALSE)
   flog.info("File %s saved into Archive folder", PSQ_file_name, name='logger.c')
   flog.info("END", PSQ_file_name, name='logger.c')

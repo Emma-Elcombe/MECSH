@@ -577,8 +577,8 @@ Extract_Load_Data <- function(){
   }
   
   # add todays date
-  todays_date <- as.character(Sys.Date())
-  merged <- data.frame(merged[c(1:18)],todays_date)
+  extract_date <- as.character(Sys.Date())
+  merged <- data.frame(merged[c(1:18)],extract_date)
   
   # Clean up
   flog.trace("clean up files", name='logger.c')
@@ -596,7 +596,7 @@ Extract_Load_Data <- function(){
   flog.info("File %s saved into Load folder", PEI_file_name, name='logger.c')
   
   # export PEI data to archive folder
-  PEI_file_name <- paste("Archive/PEI_Data ", todays_date,".csv", sep = "")
+  PEI_file_name <- paste("Archive/PEI_Data ", extract_date,".csv", sep = "")
   write.table(merged, file = PEI_file_name, sep=",", row.names = FALSE)
   flog.info("File %s saved into Archive folder", PEI_file_name, name='logger.c')
   flog.info("END", PEI_file_name, name='logger.c')
