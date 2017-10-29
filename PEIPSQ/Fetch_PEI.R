@@ -576,9 +576,9 @@ Extract_Load_Data <- function(){
     flog.info("Data in correct range", name='logger.c')
   }
   
-  # set todays date
+  # add todays date
   todays_date <- as.character(Sys.Date())
-
+  merged <- data.frame(merged[c(1:18)],todays_date)
   
   # Clean up
   flog.trace("clean up files", name='logger.c')
