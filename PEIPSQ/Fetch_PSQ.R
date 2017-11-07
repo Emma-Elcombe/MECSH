@@ -401,7 +401,7 @@ Extract_Load_Data <- function(){
     this_site_df$rsp_post <- NULL
     # Re-name columns
     names(this_site_df) <- c("status", "date", "response_id", "Q1", "age_band","age_other", "Q2","Q3","Q4","Q5","Q6",
-                             "Q7", "Q8", "Q9", "Q10", "country", "site" ,"region")
+                             "Q7", "Q8", "Q9", "Q10","comments", "country", "site" ,"region")
     # add recoding and value-adding code here
     this_site_df$response_id <- paste(sites_df[site_num,]$survey_id,"-",this_site_df$response_id, sep="")
     this_site_df$region <- paste(sites_df[site_num,]$sub_site)
@@ -418,7 +418,7 @@ Extract_Load_Data <- function(){
   ##STEP 3 - Clean downloaded data and format to match "Base" Data
   
   # reorder variables to match
-  load_file <- data.frame(c(sites_data[c(3,2,1,16,17,18, 5, 6, 4, 7, 8, 9, 10, 11, 12, 13, 14, 15)]),comments="")
+  load_file <- sites_data[c(3,2,1,17,18,19, 5, 6, 4, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)]
   flog.trace(" - extracted data formatted", name='logger.c')
   
   # perform calculations

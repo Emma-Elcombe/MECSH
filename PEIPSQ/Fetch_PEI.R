@@ -445,7 +445,7 @@ Extract_Load_Data <- function(){
     #this_site_df$rsp_region <- NULL
     # Re-name columns
     names(this_site_df) <- c("id", "status", "date","time_start", "response_id", "Q1","Q2","Q3","Q4","Q5","Q6",
-                             "age_band","age_other", "country","site","region")
+                             "age_band","age_other","comments","country","site","region")
     # add recoding and value-adding code here
     this_site_df$response_id <- paste(sites_df[site_num,]$survey_id,"-",this_site_df$response_id, sep="")
     this_site_df$region <- paste(sites_df[site_num,]$sub_site)
@@ -467,7 +467,7 @@ Extract_Load_Data <- function(){
   ##STEP 3 - Clean downloaded data and format to match "Base" Data
   
   # reorder variables to match
-  load_file <- data.frame(c(sites_data[c(3,2,1,12,13,14, 10, 11, 4, 5, 6, 7, 8, 9)]),comments="")
+  load_file <- sites_data[c(3,2,1,13,14,15, 10, 11, 4, 5, 6, 7, 8, 9, 12)]
   load_file$Q1 <- as.numeric(load_file$Q1)
   load_file$Q2 <- as.numeric(load_file$Q2)
   load_file$Q3 <- as.numeric(load_file$Q3)
@@ -548,7 +548,7 @@ Extract_Load_Data <- function(){
   #### PART C - Combine files and Export
   
   # Merge data files
-  merged <- rbind(PEI_base, PEI_1jer_load_file, PEI_2syd_load_file, PEI_3lew_load_file,
+  merged <- rbind(PEI_base, PEI_1jer_load_file, PEI_2syd_load_file, PEI_3lew_load_file, 
                   PEI_4ply_load_file, PEI_5som_load_file, PEI_6vic_load_file, PEI_7Esx_load_file)
   
   rows_fetched <- max(row(merged))
