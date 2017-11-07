@@ -468,7 +468,6 @@ Extract_Load_Data <- function(){
   try(rm(sites_data))
   sites_data <- Load_site_data()
   
-  
   ##STEP 3 - Clean downloaded data and format to match "Base" Data
   
   # reorder variables to match
@@ -480,11 +479,62 @@ Extract_Load_Data <- function(){
   flog.info("%s load_file created", site_name, name='logger.c')
   
   
+  ### ROUND 8 - Southern NSW LHD
+  
+  #STEP 1
+  survey_name <-  "PSQ"
+  site_name <-  "SNSWLHD"
+  
+  
+  ## STEP 2 - Fetch data
+  
+  # for each site...
+  get_site_data <- function(sites_df,site_num) {
+    # get the Survey ID
+    survey_id <- sites_df[site_num,]$survey_id
+    # download the data direct into dataframe
+    flog.info("%s survey being fetched", survey_id, name='logger.c')
+    this_site_df <-Rsurveygizmo::pullsg(survey_id, api="c46686a8c42e2972b07e59cbdc2f6e6e43932276e5e942953d", completes_only = TRUE, clean = TRUE)
+    rows_fetched <- max(row(this_site_df))
+    flog.info(" - %s rows added", rows_fetched, name='logger.c')
+    # remove unnecessary columns 
+    this_site_df$id <- NULL
+    this_site_df$datestarted <- NULL  
+    this_site_df$rsp_lng <- NULL
+    this_site_df$rsp_lat <- NULL
+    this_site_df$rsp_post <- NULL
+    # Re-name columns
+    names(this_site_df) <- c("status", "date", "response_id", "Q1", "age_band","age_other", "Q2","Q3","Q4","Q5","Q6",
+                             "Q7", "Q8", "Q9", "Q10", "comments", "country", "site", "region")
+    # add recoding and value-adding code here
+    this_site_df$response_id <- paste(sites_df[site_num,]$survey_id,"-",this_site_df$response_id, sep="")
+    this_site_df$region <- paste(sites_df[site_num,]$sub_site)
+    this_site_df$site <- paste(sites_df[site_num,]$site)
+    # return the dataframe
+    return(this_site_df)
+  }
+  
+  # assemble sites data
+  try(rm(sites_data))
+  sites_data <- Load_site_data()
+  
+  
+  ##STEP 3 - Clean downloaded data and format to match "Base" Data
+  
+  # reorder variables to match
+  load_file <- sites_data[c(3,2,1,17,18,19, 5, 6, 4, 7, 8, 9, 10, 11, 12, 13,14,15, 16)]
+  flog.trace(" - extracted data formatted", name='logger.c')
+  
+  # perform calculations
+  PSQ_8sthn_load_file <- score_calc_and_check(load_file)
+  flog.info("%s load_file created", site_name, name='logger.c')
+  
+  
   #### PART C - Combine files and Export
   
   # Merge data files
   merged <- rbind(PSQ_base, PSQ_1jer_load_file, PSQ_2syd_load_file, PSQ_3lew_load_file, 
-                  PSQ_4ply_load_file, PSQ_5som_load_file, PSQ_6vic_load_file, PSQ_7Esx_load_file)
+                  PSQ_4ply_load_file, PSQ_5som_load_file, PSQ_6vic_load_file, PSQ_7Esx_load_file, PSQ_8sthn_load_file)
   
   rows_fetched <- max(row(merged))
   flog.info("PSQ_base merged with load files", name='logger.c')

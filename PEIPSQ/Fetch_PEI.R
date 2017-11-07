@@ -544,12 +544,70 @@ Extract_Load_Data <- function(){
   flog.info("%s load_file created", site_name, name='logger.c')
   
   
+  ### ROUND 8 - Southern NSW LHD
+  
+  #STEP 1
+  survey_name <-  "PEI"
+  site_name <-  "SNSWLHD"
+  
+  
+  ## STEP 2 - Fetch data
+  
+  # for each site...
+  get_site_data <- function(sites_df,site_num) {
+    # get the Survey ID
+    survey_id <- sites_df[site_num,]$survey_id
+    # download the data direct into dataframe
+    flog.info("%s survey being fetched", survey_id, name='logger.c')
+    this_site_df <-Rsurveygizmo::pullsg(survey_id, api="c46686a8c42e2972b07e59cbdc2f6e6e43932276e5e942953d", completes_only = TRUE, clean = TRUE)
+    rows_fetched <- max(row(this_site_df))
+    flog.info(" - %s rows added", rows_fetched, name='logger.c')
+    # remove unnecessary columns 
+    this_site_df$rsp_lng <- NULL
+    this_site_df$rsp_lat <- NULL
+    this_site_df$rsp_post <- NULL
+    # Re-name columns
+    names(this_site_df) <- c("id", "status", "date","time_start", "response_id", "Q1","Q2","Q3","Q4","Q5","Q6",
+                             "age_band","age_other","comments", "country","site","region")
+    # add recoding and value-adding code here
+    this_site_df$response_id <- paste(sites_df[site_num,]$survey_id,"-",this_site_df$response_id, sep="")
+    this_site_df$region <- paste(sites_df[site_num,]$sub_site)
+    this_site_df$site <- paste(sites_df[site_num,]$site)
+    this_site_df[, 6:11][this_site_df[, 6:11] == "NA"] <- NA
+    this_site_df[, 6:11][this_site_df[, 6:11] == "555"] <- NA
+    this_site_df$id <- NULL
+    this_site_df$time_start <- NULL
+    # return the dataframe
+    return(this_site_df)
+  }
+  
+  # assemble sites data
+  try(rm(sites_data))
+  sites_data <- Load_site_data()
+  
+  
+  ##STEP 3 - Clean downloaded data and format to match "Base" Data
+  
+  # reorder variables to match
+  load_file <- sites_data[c(3,2,1,13,14,15, 10, 11, 4, 5, 6, 7, 8, 9, 12)]
+  load_file$Q1 <- as.numeric(load_file$Q1)
+  load_file$Q2 <- as.numeric(load_file$Q2)
+  load_file$Q3 <- as.numeric(load_file$Q3)
+  load_file$Q4 <- as.numeric(load_file$Q4)
+  load_file$Q5 <- as.numeric(load_file$Q5)
+  load_file$Q6 <- as.numeric(load_file$Q6)
+  flog.trace(" - extracted data formatted", name='logger.c')
+  
+  # perforam calculations, check totals & save load file for site
+  PEI_8sthn_load_file <- score_calc_and_check(load_file)
+  flog.info("%s load_file created", site_name, name='logger.c')
+  
   
   #### PART C - Combine files and Export
   
   # Merge data files
   merged <- rbind(PEI_base, PEI_1jer_load_file, PEI_2syd_load_file, PEI_3lew_load_file, 
-                  PEI_4ply_load_file, PEI_5som_load_file, PEI_6vic_load_file, PEI_7Esx_load_file)
+                  PEI_4ply_load_file, PEI_5som_load_file, PEI_6vic_load_file, PEI_7Esx_load_file, PEI_8sthn_load_file)
   
   rows_fetched <- max(row(merged))
   flog.info("PEI_base merged with load files", name='logger.c')
