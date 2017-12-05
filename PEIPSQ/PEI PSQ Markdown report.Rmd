@@ -34,7 +34,7 @@ Date of last data extract: `r Extract_date`
 ##### Set location
 
 ```{r Enter site for report, enter length for recent results}
-w_site <- "Jersey"
+w_site <- "Plymouth"
 ```
 
 ##### Set number of 'recent' days
@@ -116,27 +116,33 @@ ggplot(PEI_site, aes(x = qtr)) + geom_bar(fill = "Sky Blue", na.rm = TRUE) + ggt
 
 PEI_mean_qtr <- PEI_site %>% group_by(qtr) %>% summarise(mean = mean(PEI_total, na.rm = TRUE), sd = sd(PEI_total, na.rm = TRUE))
 
-ggplot(PEI_mean_qtr, aes(qtr, mean, ymin=mean-sd, ymax=mean+sd)) + ylim(0,12) + geom_pointrange(na.rm = TRUE) + geom_line(data = PEI_mean_qtr, aes(y = mean, group = 1)) + ggtitle("Average score per quarter") + xlab("Year-Quarter")  
+colr <- col2rgb('plum2')
 
-ggplot(data=PEI_site, aes(x=date, y=PEI_total)) + geom_point(na.rm = TRUE) + ylim(0,12) + stat_smooth(colour='blue', span=5, method = 'loess', na.rm = TRUE)  + ggtitle("Average score per quarter") + xlab("Date") + ylab("PEI Score")
-  
-ggplot(PEI_site, aes(x = qtr,y = PEI_total)) + geom_boxplot(na.rm = TRUE) + ylim(0,12) + ggtitle("Average score per quarter") + xlab("Year-Quarter") + ylab("PEI Score")
+ggplot(data=PEI_site, aes(x=date, y=PEI_total)) + 
+  ylim(0,12) + 
+  stat_smooth(colour='blue', span=10, method = 'loess', na.rm = TRUE) + 
+  geom_rect(xmin = min(PEI_site$date)-10, xmax = max(PEI_site$date)+10, ymin = 0-0.5, ymax = 4+0.1,  fill = 'maroon1', alpha = 0.006) + 
+  geom_point(size = 2, na.rm = TRUE) + 
+  ggtitle("Average score per quarter") + xlab("Date") + ylab("PEI Score")
 
 ```
 
 
 ##### Proportion of PEI scores Over 4, per quarter
 
-```{r, include=FALSE}
-PEI_resp_qtr_plot <- ggplot(PEI_site, aes(x = qtr,y = PEI_total), width = 5, height = 6) + geom_dotplot(aes(fill=..y..), binaxis="y", stackdir= "center", na.rm = TRUE, binwidth = 1/2)  + scale_fill_gradient2(low = "red", high="blue", mid="white", midpoint=4) + ggtitle("Responses per quarter") + xlab("Year-Quarter") + ylab("PEI score")
+```{r, fig.width=7, fig.height=4, echo=FALSE}
+
+ggplot(data=PEI_site, aes(x=date, y=PEI_total, colour = PEI_total)) + 
+  ylim(0,12) + 
+  stat_smooth(colour='blue', span=10, method = 'loess', na.rm = TRUE) + 
+  geom_point(size=2, na.rm = TRUE) +
+  #scale_color_gradient2(high = "darkgreen", low = "orchid2", mid="limegreen", midpoint = 6) +
+  geom_hline(yintercept=4, linetype="dashed", color = "red", size=1) +
+  ggtitle("Average score per quarter") + xlab("Date") + ylab("PEI score")
 
 
 ```
 
-
-```{r fig.width=8, fig.height=5, echo=FALSE}
-PEI_resp_qtr_plot
-```
 
 
 ## PSQ
@@ -210,20 +216,25 @@ ggplot(PSQ_site, aes(x = qtr)) + geom_bar(fill = "Sky Blue") + ggtitle("Number o
 
 PSQ_mean_qtr <- PSQ_site %>% group_by(qtr) %>% summarise(mean = mean(PSQ_total, na.rm = TRUE), sd = sd(PSQ_total, na.rm = TRUE))
 
-ggplot(PSQ_mean_qtr, aes(qtr, mean, ymin=mean-sd, ymax=mean+sd)) + ylim(8,30) + geom_pointrange() + geom_line(data = PSQ_mean_qtr, aes(y = mean, group = 1))+ ggtitle("Average score per quarter") + xlab("Year-Quarter") + ylab("PSQ score")
-
-ggplot(data=PSQ_site, aes(x=date, y=PSQ_total)) + geom_point(na.rm = TRUE) + ylim(10,30) + stat_smooth(colour='blue', span=10, method = 'loess', na.rm = TRUE) + ggtitle("Average score per quarter") + xlab("Date") + ylab("PSQ score")
-
-ggplot(PSQ_site, aes(x = qtr,y = PSQ_total)) + geom_boxplot(na.rm = TRUE) + ylim(10,30) + ggtitle("Average score per quarter") + xlab("Year-Quarter") + ylab("PSQ score")
-
+ggplot(data=PSQ_site, aes(x=date, y=PSQ_total)) + 
+  ylim(10,30) + 
+  stat_smooth(colour='blue', span=10, method = 'loess', na.rm = TRUE) + 
+  geom_rect(xmin = min(PSQ_site$date)-5, xmax = max(PSQ_site$date)+5, ymin = 20-0.25, ymax = 30+2, fill = 'plum2', alpha = 0.05) + 
+  geom_point(na.rm = TRUE) + 
+  ggtitle("Average score per quarter") + xlab("Date") + ylab("PSQ score")
 ```
 
 ##### Proportion of PSQ scores Over 4, per quarter
 
-```{r, fig.width=8, fig.height=5, echo=FALSE}
-PSQ_resp_qtr_plot <- ggplot(PSQ_site, aes(x = qtr,y = PSQ_total), width = 5, height = 6) + geom_dotplot(aes(fill=..y..), binaxis="y", stackdir= "center", na.rm = TRUE, binwidth = 1/2) + ylim(10,30) + scale_fill_gradient2(high = "red", low="blue", mid="white", midpoint=20) + ggtitle("Responses per quarter") + xlab("Year-Quarter") + ylab("PSQ score") + ggtitle("Responses per quarter") + xlab("Year-Quarter") + ylab("PSQ score")
+```{r, fig.width=9, fig.height=5, echo=FALSE}
 
-PSQ_resp_qtr_plot
+ggplot(data=PSQ_site, aes(x=date, y=PSQ_total)) + 
+  geom_point(aes(colour = PSQ_total), size=2) + 
+  scale_fill_gradient(high = "red", low = "orange") + 
+  ylim(10,30) + 
+  stat_smooth(colour='blue', span=5, method = 'loess', na.rm = TRUE) + 
+  ggtitle("Average score per quarter") + xlab("Date") + ylab("PSQ score")
+
 ```
 
 
