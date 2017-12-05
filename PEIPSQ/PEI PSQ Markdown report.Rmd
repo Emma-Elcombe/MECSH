@@ -1,0 +1,230 @@
+---
+title: "PEI & PSQ Fielity reporting"
+author: "Emma Elcombe"
+date: "December, 2017"
+output: word_document
+---
+
+## PEI & PSQ Report
+
+```{r Setup, include = FALSE}
+
+#Set up R environment and load the data
+
+library(readxl)
+library(foreign)
+#library(tidyr)
+library(dplyr)
+library(knitr)
+library(ggplot2)
+library(zoo)
+
+
+# Get data
+getwd()
+PEI = read.csv("C:/Users/Tresi-Emma/Documents/R for MECSH/Load/PEI_Data.csv", sep = ",")
+PSQ = read.csv("C:/Users/Tresi-Emma/Documents/R for MECSH/Load/PSQ_Data.csv", sep = "\t")
+
+Today <- Sys.Date()
+Extract_date <- PEI$extract_date[1]
+```
+Report date: **`r Today`**  
+Date of last data extract: `r Extract_date`
+
+##### Set location
+
+```{r Enter site for report, enter length for recent results}
+w_site <- "Jersey"
+```
+
+##### Set number of 'recent' days
+
+```{r Enter length for recent results}
+w_days <- 90
+```
+
+## PEI
+
+### Number of records for site and associated regions
+
+```{r, PEI Basic Data, include=FALSE}
+PEI_site <- PEI %>% filter(site == w_site)
+Px_tot <- max(row(PEI_site))
+PEI_region <- PEI_site %>% mutate(Region = region, Responses = 'Record count') %>% group_by(Region) %>% summarise(Responses=n())
+
+temp <- PEI_region %>% filter(Region == "Base")
+temp[,2]
+
+```
+
+To date there have been `r Px_tot` PEI records recorded for `r w_site`. This has included `r temp[,2]` records from the implementation phase of the project (labelled 'Base') and `r Px_tot - temp[,2]` records since.
+
+`r kable(PEI_region)`  
+
+### Average and Target scores
+#### All time
+
+```{r PEI Overall average and target scores, include=FALSE}
+
+tot_mean <- round(mean(PEI_site$PEI_total, na.rm = TRUE), digits = 2)
+Over_4 <- PEI_site %>% filter(PEI_over4==TRUE) %>% group_by(site) %>% summarise(n=n())
+Over_4_per <- round(as.numeric((Over_4[2]/Px_tot)*100), digits = 2)
+
+```
+
+The average PEI score reported is: **`r tot_mean`**.  
+The percentage of participants scoring over 4 (cut off score) is: **`r Over_4_per`%**.  
+
+#### Recent
+
+```{r PEI Recent entries only, include=FALSE}
+
+
+PEI_site$date <- as.Date(PEI_site$date, "%Y-%m-%d")
+PEI_site$days <- difftime(as.Date(Today), PEI_site$date, c("auto"))
+PEI_recent <- PEI_site %>% filter(days <= w_days)
+Px_rec <- max(row(PEI_recent))
+
+rec_mean <- round(mean(PEI_recent$PEI_total, na.rm = TRUE), digits = 2)
+rec_Over_4 <- PEI_recent %>% filter(PEI_over4==TRUE) %>% group_by(site) %>% summarise(n=n())
+rec_Over_4_per <- round(as.numeric((rec_Over_4[2]/Px_rec)*100), digits = 2)
+```
+
+During the previous `r w_days` days there have been `r Px_rec` records entered.  
+
+The average PEI score reported is: **`r rec_mean`**.  
+The percentage of participants scoring over 4 (cut off score) is: **`r rec_Over_4_per`%**.    
+
+###Graphs
+
+##### Number of responses per quarter 
+
+```{r fig.width=7, fig.height=4, echo=FALSE}
+PEI_site$qtr <- as.yearqtr(PEI_site$date, format = "%Y-%m-%d")
+PEI_site$qtr <- as.factor(PEI_site$qtr)
+
+ggplot(PEI_site, aes(x = qtr)) + geom_bar(fill = "Sky Blue", na.rm = TRUE) + ggtitle("Number of responses per quarter") + xlab("Year-Quarter")  
+
+```
+
+
+
+
+##### Average PEI score per quarter - 3 different presentations
+
+```{r,  fig.width=7, fig.height=4, echo=FALSE}
+
+PEI_mean_qtr <- PEI_site %>% group_by(qtr) %>% summarise(mean = mean(PEI_total, na.rm = TRUE), sd = sd(PEI_total, na.rm = TRUE))
+
+ggplot(PEI_mean_qtr, aes(qtr, mean, ymin=mean-sd, ymax=mean+sd)) + ylim(0,12) + geom_pointrange(na.rm = TRUE) + geom_line(data = PEI_mean_qtr, aes(y = mean, group = 1)) + ggtitle("Average score per quarter") + xlab("Year-Quarter")  
+
+ggplot(data=PEI_site, aes(x=date, y=PEI_total)) + geom_point(na.rm = TRUE) + ylim(0,12) + stat_smooth(colour='blue', span=5, method = 'loess', na.rm = TRUE)  + ggtitle("Average score per quarter") + xlab("Date") + ylab("PEI Score")
+  
+ggplot(PEI_site, aes(x = qtr,y = PEI_total)) + geom_boxplot(na.rm = TRUE) + ylim(0,12) + ggtitle("Average score per quarter") + xlab("Year-Quarter") + ylab("PEI Score")
+
+```
+
+
+##### Proportion of PEI scores Over 4, per quarter
+
+```{r, include=FALSE}
+PEI_resp_qtr_plot <- ggplot(PEI_site, aes(x = qtr,y = PEI_total), width = 5, height = 6) + geom_dotplot(aes(fill=..y..), binaxis="y", stackdir= "center", na.rm = TRUE, binwidth = 1/2)  + scale_fill_gradient2(low = "red", high="blue", mid="white", midpoint=4) + ggtitle("Responses per quarter") + xlab("Year-Quarter") + ylab("PEI score")
+
+
+```
+
+
+```{r fig.width=8, fig.height=5, echo=FALSE}
+PEI_resp_qtr_plot
+```
+
+
+## PSQ
+
+### Number of records for site and associated regions
+
+```{r, PSQ Basic Data, include=FALSE}
+PSQ_site <- PSQ %>% filter(site == w_site)
+Px_tot <- max(row(PSQ_site))
+PSQ_region <- PSQ_site %>% mutate(Region = region, Responses = 'Record count') %>% group_by(Region) %>% summarise(Responses=n())
+
+temp <- PSQ_region %>% filter(Region == "Base")
+temp[,2]
+
+```
+
+To date there have been `r Px_tot` PSQ records recorded for `r w_site`. This has included `r temp[,2]` records from the implementation phase of the project (labelled 'Base') and `r Px_tot - temp[,2]` records since.
+
+`r kable(PSQ_region)`  
+
+### Average and Target scores
+#### All time
+
+```{r PSQ Overall average and target scores, include=FALSE}
+
+tot_mean <- round(mean(PSQ_site$PSQ_total, na.rm = TRUE), digits = 2)
+Under_20 <- PSQ_site %>% filter(PSQ_under20==TRUE) %>% group_by(site) %>% summarise(n=n())
+Under_20_per <- round(as.numeric((Under_20[2]/Px_tot)*100), digits = 2)
+
+```
+
+The average PSQ score reported is: **`r tot_mean`**.  
+The percentage of participants scoring over 4 (cut off score) is: **`r Over_4_per`%**.  
+
+#### Recent
+
+```{r PSQ Recent entries only, include=FALSE}
+
+
+PSQ_site$date <- as.Date(PSQ_site$date, "%Y-%m-%d")
+PSQ_site$days <- difftime(as.Date(Today), PSQ_site$date, c("auto"))
+PSQ_recent <- PSQ_site %>% filter(days <= w_days)
+Px_rec <- max(row(PSQ_recent))
+
+rec_mean <- round(mean(PSQ_recent$PSQ_total, na.rm = TRUE), digits = 2)
+rec_Under_20 <- PSQ_recent %>% filter(PSQ_under20==TRUE) %>% group_by(site) %>% summarise(n=n())
+rec_Under_20_per <- round(as.numeric((rec_Under_20[2]/Px_rec)*100), digits = 2)
+```
+
+During the previous `r w_days` days there have been `r Px_rec` records entered.  
+
+The average PSQ score reported is: **`r rec_mean`**.  
+The percentage of participants scoring over 4 (cut off score) is: **`r rec_Over_4_per`%**.    
+
+###Graphs
+
+##### Number of responses per quarter 
+
+```{r, fig.width=7, fig.height=4, echo=FALSE}
+PSQ_site$qtr <- as.yearqtr(PSQ_site$date, format = "%Y-%m-%d")
+PSQ_site$qtr <- as.factor(PSQ_site$qtr)
+
+ggplot(PSQ_site, aes(x = qtr)) + geom_bar(fill = "Sky Blue") + ggtitle("Number of responses per quarter") + xlab("Year-Quarter")  
+
+```
+
+
+##### Average PSQ score per quarter - 3 different presentations
+
+```{r, fig.width=7, fig.height=4, echo=FALSE}
+
+PSQ_mean_qtr <- PSQ_site %>% group_by(qtr) %>% summarise(mean = mean(PSQ_total, na.rm = TRUE), sd = sd(PSQ_total, na.rm = TRUE))
+
+ggplot(PSQ_mean_qtr, aes(qtr, mean, ymin=mean-sd, ymax=mean+sd)) + ylim(8,30) + geom_pointrange() + geom_line(data = PSQ_mean_qtr, aes(y = mean, group = 1))+ ggtitle("Average score per quarter") + xlab("Year-Quarter") + ylab("PSQ score")
+
+ggplot(data=PSQ_site, aes(x=date, y=PSQ_total)) + geom_point(na.rm = TRUE) + ylim(10,30) + stat_smooth(colour='blue', span=10, method = 'loess', na.rm = TRUE) + ggtitle("Average score per quarter") + xlab("Date") + ylab("PSQ score")
+
+ggplot(PSQ_site, aes(x = qtr,y = PSQ_total)) + geom_boxplot(na.rm = TRUE) + ylim(10,30) + ggtitle("Average score per quarter") + xlab("Year-Quarter") + ylab("PSQ score")
+
+```
+
+##### Proportion of PSQ scores Over 4, per quarter
+
+```{r, fig.width=8, fig.height=5, echo=FALSE}
+PSQ_resp_qtr_plot <- ggplot(PSQ_site, aes(x = qtr,y = PSQ_total), width = 5, height = 6) + geom_dotplot(aes(fill=..y..), binaxis="y", stackdir= "center", na.rm = TRUE, binwidth = 1/2) + ylim(10,30) + scale_fill_gradient2(high = "red", low="blue", mid="white", midpoint=20) + ggtitle("Responses per quarter") + xlab("Year-Quarter") + ylab("PSQ score") + ggtitle("Responses per quarter") + xlab("Year-Quarter") + ylab("PSQ score")
+
+PSQ_resp_qtr_plot
+```
+
+
+###End
