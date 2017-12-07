@@ -11,7 +11,7 @@ Set up R environment and load data (HV - SPSS v10, and disclosure ('srf 050917 v
 
 
 ```{r Setup, include = FALSE}
-
+#install.packages("tidyr")
 library(readxl)
 library(foreign)
 library(tidyr)
@@ -19,12 +19,13 @@ library(dplyr)
 library(knitr)
 library(ggplot2)
 
+
 # Get data
 setwd("C:/Users/Tresi-Emma/Documents/MECSH/By Site/r@h/Nurse home visit activity data")
 getwd()
-SPSS_v10 = read.spss("SPSS_r@h_June17 - v10 new fidelity.sav", to.data.frame=TRUE)
+SPSS_v10 = read.spss("SPSS_r@h_June17 - v10 new fidelity.sav", to.data.frame=TRUE, use.value.labels = TRUE)
 setwd("C:/Users/Tresi-Emma/Documents/MECSH/By Site/r@h/Risk Factors/Mother vulnerablity data")
-SPSS_srf = read.spss("srf 050917 v10 EE - taller v2.sav", to.data.frame=TRUE)
+SPSS_srf = read.spss("srf 050917 v10 EE - taller v2.sav", to.data.frame=TRUE, use.value.labels = TRUE)
 setwd("C:/Users/Tresi-Emma/Documents/R for MECSH/BG")
 ```
 
@@ -45,7 +46,7 @@ Number of participants in srf file = `r B.Rows_Px_srf`
 ### Risks per mother
 
 ```{r, include=FALSE}
-Px_risks <- SPSS_srf %>% group_by(ResearchID, RiskRecorded) %>% summarise(n=n()) %>% spread(RiskRecorded,n )
+Px_risks <- SPSS_srf %>% group_by(ResearchID, RiskRecorded) %>% summarise(n=n()) %>% spread(RiskRecorded,n ) 
 Px_risks <- Px_risks %>% group_by(Yes) %>% summarise(n=n())
 D.Rcd_cnt <- colSums(Px_risks[,2])
 # replace missing with zero
@@ -100,21 +101,27 @@ Risks Recorded `r kable(Risk_tbl)`
 ### Major risk 1: Domestic Violence
 
 #### Create table of disclosures
-```{r}
+```{r , include=FALSE}
 # read numbers from table in R markdown output
 DV_rcd <- df_srf %>% filter(as.numeric(Risk_Factor) == 4 | as.numeric(Risk_Factor) == 8)
 rows_fetched <- max(row(DV_rcd))
 
-test_date <- DV_rcd[1,"DateDisclosed_Single"]
-  
-SPSS_v10 %>% filter(ResearchID == 144 & Valid_new == "Valid" & date_of_visit<test_date) %>% arrange(desc(date_of_visit))
+Px_DV <- DV_rcd %>% group_by(ResearchID) %>% summarise(count=n())
 
+F.Px_DV <- nrow(Px_DV)
+Px_DV_dist <- Px_DV %>% group_by(count) %>% summarise(n=n())
 
 ```
 
+In total, `r rows_fetched` records were returned for DV.  
+
+This includes disclousres for `r F.Px_DV` Families.  
+
+Distribution of disclosure `r kable(Px_DV_dist)`
+
 #### Find records prior to disclosure, record count and details
 
-```{r}
+```{r, include=FALSE}
 
   # for each site...
   get_site_data <- function(DV_rcd_df,row_num) {
@@ -122,7 +129,7 @@ SPSS_v10 %>% filter(ResearchID == 144 & Valid_new == "Valid" & date_of_visit<tes
     Px_id <- DV_rcd_df[row_num,]$ResearchID
     Date_Dsc <- DV_rcd_df[row_num,]$DateDisclosed_Single
     # get data 
-    this_row_df <- SPSS_v10 %>% filter(ResearchID == Px_id & Valid_new == "Valid" & date_of_visit < Date_Dsc) %>% arrange(desc(date_of_visit))
+    this_row_df <- SPSS_v10 %>% filter(ResearchID == Px_id & Valid_new == "Valid" & date_of_visit <= Date_Dsc) %>% arrange(desc(date_of_visit))
     if(nrow(this_row_df) > 0) this_row_df$Row <- seq.int(nrow(this_row_df))
      # add recoding and value-adding code here
     Px_HV_cnt <- nrow(this_row_df)
@@ -133,7 +140,7 @@ SPSS_v10 %>% filter(ResearchID == 144 & Valid_new == "Valid" & date_of_visit<tes
     return(list(this_row_df, Px_HV_cnt))
   }
 
-rm(fetched_data, Px_HV_cnt)
+try(rm(fetched_data, Px_HV_cnt))
 
 for (i in seq_len(rows_fetched)) {
       
@@ -149,21 +156,379 @@ for (i in seq_len(rows_fetched)) {
 DV_rcd$Px_HV_cnt <- Px_HV_cnt
 
 fetched_data <- fetched_data[c(393,3:13,20:392)]
-
+G.All_Rows <- nrow(fetched_data)
 ```
 
 
+```{r, include=FALSE}
+# remove unnecessry columns and filter for previous 3 records
+Pre_disc_act <- fetched_data[c(1:10, 208:224, 244:290)] %>% filter(Row <= 3) 
+#remove duplicates
+Pre_disc_act <- Pre_disc_act %>% mutate(dups = duplicated(Pre_disc_act[,2:74])) %>% filter(dups==FALSE)
+G.Rows <- nrow(Pre_disc_act)
+
+# For testing only
+#summary(Pre_disc_act[11])
+#sum(Pre_disc_act[11] =="Yes") / F.Rows *100
+#colnames(Pre_disc_act[11])
+
+```
+
+In total `r G.All_Rows` HV's were completed prior to these disclosures, however after trimming the HV records to include only the 3 vists which occured at or just prior to disclosure (and removing duplicates), there are `r  G.Rows` HV records to analyse.
+
+
+```{r For developemnt only, include=FALSE}
+
+#col_names <- colnames(Pre_disc_act)
+#write.csv(col_names, file = "column_names.csv")
+```
+
+These rows show how many times each active was done, and compares that to the total number of records included. Record count: `r G.Rows`  
+In these Rows '_' = 'No' for some variables.
+
+Variable: `r colnames(Pre_disc_act[34])`, Responses: `r summary(Pre_disc_act[34])`. Percent Yes: `r round(sum(Pre_disc_act[34] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[35])`, Responses: `r summary(Pre_disc_act[35])`. Percent Yes: `r round(sum(Pre_disc_act[35] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[36])`, Responses: `r summary(Pre_disc_act[36])`. Percent Yes: `r round(sum(Pre_disc_act[36] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[37])`, Responses: `r summary(Pre_disc_act[37])`. Percent Yes: `r round(sum(Pre_disc_act[37] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[38])`, Responses: `r summary(Pre_disc_act[38])`. Percent Yes: `r round(sum(Pre_disc_act[38] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[39])`, Responses: `r summary(Pre_disc_act[39])`. Percent Yes: `r round(sum(Pre_disc_act[39] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[40])`, Responses: `r summary(Pre_disc_act[40])`. Percent Yes: `r round(sum(Pre_disc_act[40] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[41])`, Responses: `r summary(Pre_disc_act[41])`. Percent Yes: `r round(sum(Pre_disc_act[41] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[42])`, Responses: `r summary(Pre_disc_act[42])`. Percent Yes: `r round(sum(Pre_disc_act[42] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[43])`, Responses: `r summary(Pre_disc_act[43])`. Percent Yes: `r round(sum(Pre_disc_act[43] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[44])`, Responses: `r summary(Pre_disc_act[44])`. Percent Yes: `r round(sum(Pre_disc_act[44] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[45])`, Responses: `r summary(Pre_disc_act[45])`. Percent Yes: `r round(sum(Pre_disc_act[45] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[46])`, Responses: `r summary(Pre_disc_act[46])`. Percent Yes: `r round(sum(Pre_disc_act[46] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[47])`, Responses: `r summary(Pre_disc_act[47])`. Percent Yes: `r round(sum(Pre_disc_act[47] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[48])`, Responses: `r summary(Pre_disc_act[48])`. Percent Yes: `r round(sum(Pre_disc_act[48] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[49])`, Responses: `r summary(Pre_disc_act[49])`. Percent Yes: `r round(sum(Pre_disc_act[49] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[50])`, Responses: `r summary(Pre_disc_act[50])`. Percent Yes: `r round(sum(Pre_disc_act[50] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[51])`, Responses: `r summary(Pre_disc_act[51])`. Percent Yes: `r round(sum(Pre_disc_act[51] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[52])`, Responses: `r summary(Pre_disc_act[52])`. Percent Yes: `r round(sum(Pre_disc_act[52] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[53])`, Responses: `r summary(Pre_disc_act[53])`. Percent Yes: `r round(sum(Pre_disc_act[53] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[54])`, Responses: `r summary(Pre_disc_act[54])`. Percent Yes: `r round(sum(Pre_disc_act[54] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[55])`, Responses: `r summary(Pre_disc_act[55])`. Percent Yes: `r round(sum(Pre_disc_act[55] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[56])`, Responses: `r summary(Pre_disc_act[56])`. Percent Yes: `r round(sum(Pre_disc_act[56] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[57])`, Responses: `r summary(Pre_disc_act[57])`. Percent Yes: `r round(sum(Pre_disc_act[57] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[58])`, Responses: `r summary(Pre_disc_act[58])`. Percent Yes: `r round(sum(Pre_disc_act[58] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[59])`, Responses: `r summary(Pre_disc_act[59])`. Percent Yes: `r round(sum(Pre_disc_act[59] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[60])`, Responses: `r summary(Pre_disc_act[60])`. Percent Yes: `r round(sum(Pre_disc_act[60] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[61])`, Responses: `r summary(Pre_disc_act[61])`. Percent Yes: `r round(sum(Pre_disc_act[61] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[62])`, Responses: `r summary(Pre_disc_act[62])`. Percent Yes: `r round(sum(Pre_disc_act[62] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[63])`, Responses: `r summary(Pre_disc_act[63])`. Percent Yes: `r round(sum(Pre_disc_act[63] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[64])`, Responses: `r summary(Pre_disc_act[64])`. Percent Yes: `r round(sum(Pre_disc_act[64] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[65])`, Responses: `r summary(Pre_disc_act[65])`. Percent Yes: `r round(sum(Pre_disc_act[65] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[66])`, Responses: `r summary(Pre_disc_act[66])`. Percent Yes: `r round(sum(Pre_disc_act[66] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[67])`, Responses: `r summary(Pre_disc_act[67])`. Percent Yes: `r round(sum(Pre_disc_act[67] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[68])`, Responses: `r summary(Pre_disc_act[68])`. Percent Yes: `r round(sum(Pre_disc_act[68] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[69])`, Responses: `r summary(Pre_disc_act[69])`. Percent Yes: `r round(sum(Pre_disc_act[69] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[70])`, Responses: `r summary(Pre_disc_act[70])`. Percent Yes: `r round(sum(Pre_disc_act[70] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[71])`, Responses: `r summary(Pre_disc_act[71])`. Percent Yes: `r round(sum(Pre_disc_act[71] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[72])`, Responses: `r summary(Pre_disc_act[72])`. Percent Yes: `r round(sum(Pre_disc_act[72] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[73])`, Responses: `r summary(Pre_disc_act[73])`. Percent Yes: `r round(sum(Pre_disc_act[73] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[74])`, Responses: `r summary(Pre_disc_act[74])`. Percent Yes: `r round(sum(Pre_disc_act[74] =="Yes") / G.Rows *100, digits = 2)`%  
+
+
+Variable: `r colnames(Pre_disc_act[11])`, Responses: `r summary(Pre_disc_act[11])`. Percent Yes: `r round(sum(Pre_disc_act[11] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[12])`, Responses: `r summary(Pre_disc_act[12])`. Percent Yes: `r round(sum(Pre_disc_act[12] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[13])`, Responses: `r summary(Pre_disc_act[13])`. Percent Yes: `r round(sum(Pre_disc_act[13] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[14])`, Responses: `r summary(Pre_disc_act[14])`. Percent Yes: `r round(sum(Pre_disc_act[14] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[15])`, Responses: `r summary(Pre_disc_act[15])`. Percent Yes: `r round(sum(Pre_disc_act[15] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[16])`, Responses: `r summary(Pre_disc_act[16])`. Percent Yes: `r round(sum(Pre_disc_act[16] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[17])`, Responses: `r summary(Pre_disc_act[17])`. Percent Yes: `r round(sum(Pre_disc_act[17] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[18])`, Responses: `r summary(Pre_disc_act[18])`. Percent Yes: `r round(sum(Pre_disc_act[18] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[19])`, Responses: `r summary(Pre_disc_act[19])`. Percent Yes: `r round(sum(Pre_disc_act[19] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[20])`, Responses: `r summary(Pre_disc_act[20])`. Percent Yes: `r round(sum(Pre_disc_act[20] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[21])`, Responses: `r summary(Pre_disc_act[21])`. Percent Yes: `r round(sum(Pre_disc_act[21] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[22])`, Responses: `r summary(Pre_disc_act[22])`. Percent Yes: `r round(sum(Pre_disc_act[22] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[23])`, Responses: `r summary(Pre_disc_act[23])`. Percent Yes: `r round(sum(Pre_disc_act[23] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[24])`, Responses: `r summary(Pre_disc_act[24])`. Percent Yes: `r round(sum(Pre_disc_act[24] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[25])`, Responses: `r summary(Pre_disc_act[25])`. Percent Yes: `r round(sum(Pre_disc_act[25] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[26])`, Responses: `r summary(Pre_disc_act[26])`. Percent Yes: `r round(sum(Pre_disc_act[26] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[27])`, Responses: `r summary(Pre_disc_act[27])`. Percent Yes: `r round(sum(Pre_disc_act[27] =="Yes") / G.Rows *100, digits = 2)`%  
 
 
 
 
 
 
+### Major risk 2: Drugs and Alcohol
+
+#### Create table of disclosures
+```{r , include=FALSE}
+# read numbers from table in R markdown output
+DA_rcd <- df_srf %>% filter(as.numeric(Risk_Factor) == 2 | as.numeric(Risk_Factor) == 14 | as.numeric(Risk_Factor) == 35)
+rows_fetched <- max(row(DA_rcd))
+
+Px_DA <- DA_rcd %>% group_by(ResearchID) %>% summarise(count=n())
+
+F.Px_DA <- nrow(Px_DA)
+Px_DA_dist <- Px_DA %>% group_by(count) %>% summarise(n=n())
+
+```
+
+In total, `r rows_fetched` records were returned for Drugs, Alcohol Abuse, or Prescription medication dependence.  
+
+This includes disclousres for `r F.Px_DA` Families.  
+
+Distribution of disclosure `r kable(Px_DA_dist)`
+
+#### Find records prior to disclosure, record count and details
+
+```{r, include=FALSE}
+
+  # for each site...
+  get_site_data <- function(DA_rcd_df,row_num) {
+    # get the ID and Date
+    Px_id <- DA_rcd_df[row_num,]$ResearchID
+    Date_Dsc <- DA_rcd_df[row_num,]$DateDisclosed_Single
+    # get data 
+    this_row_df <- SPSS_v10 %>% filter(ResearchID == Px_id & Valid_new == "Valid" & date_of_visit <= Date_Dsc) %>% arrange(desc(date_of_visit))
+    if(nrow(this_row_df) > 0) this_row_df$Row <- seq.int(nrow(this_row_df))
+     # add recoding and value-adding code here
+    Px_HV_cnt <- nrow(this_row_df)
+     #this_site_df$site <- paste(sites_df[site_num,]$site)
+     #this_site_df[, 6:11][this_site_df[, 6:11] == "NA"] <- NA
+     #this_site_df$time_start <- NULL
+    # return the dataframe
+    return(list(this_row_df, Px_HV_cnt))
+  }
+
+try(rm(fetched_data, Px_HV_cnt))
+
+for (i in seq_len(rows_fetched)) {
+      
+      if (exists("fetched_data")) {
+        fetched_data <- rbind(fetched_data, get_site_data(DA_rcd,i)[[1]])
+        Px_HV_cnt <- rbind(Px_HV_cnt, get_site_data(DA_rcd,i)[[2]])
+      } else {
+        fetched_data <- get_site_data(DA_rcd,i)[[1]]
+        Px_HV_cnt <- get_site_data(DA_rcd,i)[[2]]
+      }
+    } 
+
+DA_rcd$Px_HV_cnt <- Px_HV_cnt
+
+fetched_data <- fetched_data[c(393,3:13,20:392)]
+G.All_Rows <- nrow(fetched_data)
+```
+
+
+```{r, include=FALSE}
+# remove unnecessry columns and filter for previous 3 records
+Pre_disc_act <- fetched_data[c(1:10, 208:224, 244:290)] %>% filter(Row <= 3) 
+#remove duplicates
+Pre_disc_act <- Pre_disc_act %>% mutate(dups = duplicated(Pre_disc_act[,2:74])) %>% filter(dups==FALSE)
+G.Rows <- nrow(Pre_disc_act)
+
+```
+
+In total `r G.All_Rows` HV's were completed prior to these disclosures, however after trimming the HV records to include only the 3 vists which occured at or just prior to disclosure (and removing duplicates), there are `r  G.Rows` HV records to analyse.
+
+
+These rows show how many times each active was done, and compares that to the total number of records included. Record count: `r G.Rows`  
+In these Rows '_' = 'No' for some variables.
+
+Variable: `r colnames(Pre_disc_act[34])`, Responses: `r summary(Pre_disc_act[34])`. Percent Yes: `r round(sum(Pre_disc_act[34] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[35])`, Responses: `r summary(Pre_disc_act[35])`. Percent Yes: `r round(sum(Pre_disc_act[35] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[36])`, Responses: `r summary(Pre_disc_act[36])`. Percent Yes: `r round(sum(Pre_disc_act[36] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[37])`, Responses: `r summary(Pre_disc_act[37])`. Percent Yes: `r round(sum(Pre_disc_act[37] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[38])`, Responses: `r summary(Pre_disc_act[38])`. Percent Yes: `r round(sum(Pre_disc_act[38] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[39])`, Responses: `r summary(Pre_disc_act[39])`. Percent Yes: `r round(sum(Pre_disc_act[39] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[40])`, Responses: `r summary(Pre_disc_act[40])`. Percent Yes: `r round(sum(Pre_disc_act[40] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[41])`, Responses: `r summary(Pre_disc_act[41])`. Percent Yes: `r round(sum(Pre_disc_act[41] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[42])`, Responses: `r summary(Pre_disc_act[42])`. Percent Yes: `r round(sum(Pre_disc_act[42] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[43])`, Responses: `r summary(Pre_disc_act[43])`. Percent Yes: `r round(sum(Pre_disc_act[43] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[44])`, Responses: `r summary(Pre_disc_act[44])`. Percent Yes: `r round(sum(Pre_disc_act[44] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[45])`, Responses: `r summary(Pre_disc_act[45])`. Percent Yes: `r round(sum(Pre_disc_act[45] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[46])`, Responses: `r summary(Pre_disc_act[46])`. Percent Yes: `r round(sum(Pre_disc_act[46] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[47])`, Responses: `r summary(Pre_disc_act[47])`. Percent Yes: `r round(sum(Pre_disc_act[47] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[48])`, Responses: `r summary(Pre_disc_act[48])`. Percent Yes: `r round(sum(Pre_disc_act[48] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[49])`, Responses: `r summary(Pre_disc_act[49])`. Percent Yes: `r round(sum(Pre_disc_act[49] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[50])`, Responses: `r summary(Pre_disc_act[50])`. Percent Yes: `r round(sum(Pre_disc_act[50] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[51])`, Responses: `r summary(Pre_disc_act[51])`. Percent Yes: `r round(sum(Pre_disc_act[51] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[52])`, Responses: `r summary(Pre_disc_act[52])`. Percent Yes: `r round(sum(Pre_disc_act[52] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[53])`, Responses: `r summary(Pre_disc_act[53])`. Percent Yes: `r round(sum(Pre_disc_act[53] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[54])`, Responses: `r summary(Pre_disc_act[54])`. Percent Yes: `r round(sum(Pre_disc_act[54] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[55])`, Responses: `r summary(Pre_disc_act[55])`. Percent Yes: `r round(sum(Pre_disc_act[55] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[56])`, Responses: `r summary(Pre_disc_act[56])`. Percent Yes: `r round(sum(Pre_disc_act[56] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[57])`, Responses: `r summary(Pre_disc_act[57])`. Percent Yes: `r round(sum(Pre_disc_act[57] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[58])`, Responses: `r summary(Pre_disc_act[58])`. Percent Yes: `r round(sum(Pre_disc_act[58] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[59])`, Responses: `r summary(Pre_disc_act[59])`. Percent Yes: `r round(sum(Pre_disc_act[59] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[60])`, Responses: `r summary(Pre_disc_act[60])`. Percent Yes: `r round(sum(Pre_disc_act[60] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[61])`, Responses: `r summary(Pre_disc_act[61])`. Percent Yes: `r round(sum(Pre_disc_act[61] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[62])`, Responses: `r summary(Pre_disc_act[62])`. Percent Yes: `r round(sum(Pre_disc_act[62] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[63])`, Responses: `r summary(Pre_disc_act[63])`. Percent Yes: `r round(sum(Pre_disc_act[63] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[64])`, Responses: `r summary(Pre_disc_act[64])`. Percent Yes: `r round(sum(Pre_disc_act[64] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[65])`, Responses: `r summary(Pre_disc_act[65])`. Percent Yes: `r round(sum(Pre_disc_act[65] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[66])`, Responses: `r summary(Pre_disc_act[66])`. Percent Yes: `r round(sum(Pre_disc_act[66] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[67])`, Responses: `r summary(Pre_disc_act[67])`. Percent Yes: `r round(sum(Pre_disc_act[67] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[68])`, Responses: `r summary(Pre_disc_act[68])`. Percent Yes: `r round(sum(Pre_disc_act[68] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[69])`, Responses: `r summary(Pre_disc_act[69])`. Percent Yes: `r round(sum(Pre_disc_act[69] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[70])`, Responses: `r summary(Pre_disc_act[70])`. Percent Yes: `r round(sum(Pre_disc_act[70] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[71])`, Responses: `r summary(Pre_disc_act[71])`. Percent Yes: `r round(sum(Pre_disc_act[71] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[72])`, Responses: `r summary(Pre_disc_act[72])`. Percent Yes: `r round(sum(Pre_disc_act[72] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[73])`, Responses: `r summary(Pre_disc_act[73])`. Percent Yes: `r round(sum(Pre_disc_act[73] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[74])`, Responses: `r summary(Pre_disc_act[74])`. Percent Yes: `r round(sum(Pre_disc_act[74] =="Yes") / G.Rows *100, digits = 2)`%  
+
+
+Variable: `r colnames(Pre_disc_act[11])`, Responses: `r summary(Pre_disc_act[11])`. Percent Yes: `r round(sum(Pre_disc_act[11] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[12])`, Responses: `r summary(Pre_disc_act[12])`. Percent Yes: `r round(sum(Pre_disc_act[12] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[13])`, Responses: `r summary(Pre_disc_act[13])`. Percent Yes: `r round(sum(Pre_disc_act[13] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[14])`, Responses: `r summary(Pre_disc_act[14])`. Percent Yes: `r round(sum(Pre_disc_act[14] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[15])`, Responses: `r summary(Pre_disc_act[15])`. Percent Yes: `r round(sum(Pre_disc_act[15] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[16])`, Responses: `r summary(Pre_disc_act[16])`. Percent Yes: `r round(sum(Pre_disc_act[16] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[17])`, Responses: `r summary(Pre_disc_act[17])`. Percent Yes: `r round(sum(Pre_disc_act[17] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[18])`, Responses: `r summary(Pre_disc_act[18])`. Percent Yes: `r round(sum(Pre_disc_act[18] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[19])`, Responses: `r summary(Pre_disc_act[19])`. Percent Yes: `r round(sum(Pre_disc_act[19] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[20])`, Responses: `r summary(Pre_disc_act[20])`. Percent Yes: `r round(sum(Pre_disc_act[20] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[21])`, Responses: `r summary(Pre_disc_act[21])`. Percent Yes: `r round(sum(Pre_disc_act[21] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[22])`, Responses: `r summary(Pre_disc_act[22])`. Percent Yes: `r round(sum(Pre_disc_act[22] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[23])`, Responses: `r summary(Pre_disc_act[23])`. Percent Yes: `r round(sum(Pre_disc_act[23] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[24])`, Responses: `r summary(Pre_disc_act[24])`. Percent Yes: `r round(sum(Pre_disc_act[24] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[25])`, Responses: `r summary(Pre_disc_act[25])`. Percent Yes: `r round(sum(Pre_disc_act[25] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[26])`, Responses: `r summary(Pre_disc_act[26])`. Percent Yes: `r round(sum(Pre_disc_act[26] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[27])`, Responses: `r summary(Pre_disc_act[27])`. Percent Yes: `r round(sum(Pre_disc_act[27] =="Yes") / G.Rows *100, digits = 2)`%  
 
 
 
+### Major risk 3: Maternal Mental Health
+
+#### Create table of disclosures
+```{r , include=FALSE}
+# read numbers from table in R markdown output
+MMH_rcd <- df_srf %>% filter(as.numeric(Risk_Factor) == 18 | (as.numeric(Risk_Factor) >= 20 & as.numeric(Risk_Factor) <= 32))
+rows_fetched <- max(row(MMH_rcd))
+
+Px_MMH <- MMH_rcd %>% group_by(ResearchID) %>% summarise(count=n())
+
+F.Px_MMH <- nrow(Px_MMH)
+Px_MMH_dist <- Px_MMH %>% group_by(count) %>% summarise(n=n())
+
+```
+
+In total, `r rows_fetched` records were returned for Maternal Mental health variables (18, 20:32).  
+
+This includes disclousres for `r F.Px_MMH` Families.  
+
+Distribution of disclosure `r kable(Px_MMH_dist)`
+
+#### Find records prior to disclosure, record count and details
+
+```{r, include=FALSE}
+
+  # for each site...
+  get_site_data <- function(MMH_rcd_df,row_num) {
+    # get the ID and MMHte
+    Px_id <- MMH_rcd_df[row_num,]$ResearchID
+    date_Dsc <- MMH_rcd_df[row_num,]$DateDisclosed_Single
+    # get MMHta 
+    this_row_df <- SPSS_v10 %>% filter(ResearchID == Px_id & Valid_new == "Valid" & date_of_visit <= date_Dsc) %>% arrange(desc(date_of_visit))
+    if(nrow(this_row_df) > 0) this_row_df$Row <- seq.int(nrow(this_row_df))
+     # add recoding and value-adding code here
+    Px_HV_cnt <- nrow(this_row_df)
+     #this_site_df$site <- paste(sites_df[site_num,]$site)
+     #this_site_df[, 6:11][this_site_df[, 6:11] == "NA"] <- NA
+     #this_site_df$time_start <- NULL
+    # return the MMHtaframe
+    return(list(this_row_df, Px_HV_cnt))
+  }
+
+try(rm(fetched_data, Px_HV_cnt))
+
+for (i in seq_len(rows_fetched)) {
+      
+      if (exists("fetched_data")) {
+        fetched_data <- rbind(fetched_data, get_site_data(MMH_rcd,i)[[1]])
+        Px_HV_cnt <- rbind(Px_HV_cnt, get_site_data(MMH_rcd,i)[[2]])
+      } else {
+        fetched_data <- get_site_data(MMH_rcd,i)[[1]]
+        Px_HV_cnt <- get_site_data(MMH_rcd,i)[[2]]
+      }
+    } 
+
+MMH_rcd$Px_HV_cnt <- Px_HV_cnt
+
+fetched_data <- fetched_data[c(393,3:13,20:392)]
+G.All_Rows <- nrow(fetched_data)
+```
 
 
+```{r, include=FALSE}
+# remove unnecessry columns and filter for previous 3 records
+Pre_disc_act <- fetched_data[c(1:10, 208:224, 244:290)] %>% filter(Row <= 3) 
+#remove duplicates
+Pre_disc_act <- Pre_disc_act %>% mutate(dups = duplicated(Pre_disc_act[,2:74])) %>% filter(dups==FALSE)
+G.Rows <- nrow(Pre_disc_act)
+
+```
+
+In total `r G.All_Rows` HV's were completed prior to these disclosures, however after trimming the HV records to include only the 3 vists which occured at or just prior to disclosure (and removing duplicates), there are `r  G.Rows` HV records to analyse.
+
+
+These rows show how many times each active was done, and compares that to the total number of records included. Record count: `r G.Rows`  
+In these Rows '_' = 'No' for some variables.
+
+Variable: `r colnames(Pre_disc_act[34])`, Responses: `r summary(Pre_disc_act[34])`. Percent Yes: `r round(sum(Pre_disc_act[34] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[35])`, Responses: `r summary(Pre_disc_act[35])`. Percent Yes: `r round(sum(Pre_disc_act[35] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[36])`, Responses: `r summary(Pre_disc_act[36])`. Percent Yes: `r round(sum(Pre_disc_act[36] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[37])`, Responses: `r summary(Pre_disc_act[37])`. Percent Yes: `r round(sum(Pre_disc_act[37] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[38])`, Responses: `r summary(Pre_disc_act[38])`. Percent Yes: `r round(sum(Pre_disc_act[38] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[39])`, Responses: `r summary(Pre_disc_act[39])`. Percent Yes: `r round(sum(Pre_disc_act[39] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[40])`, Responses: `r summary(Pre_disc_act[40])`. Percent Yes: `r round(sum(Pre_disc_act[40] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[41])`, Responses: `r summary(Pre_disc_act[41])`. Percent Yes: `r round(sum(Pre_disc_act[41] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[42])`, Responses: `r summary(Pre_disc_act[42])`. Percent Yes: `r round(sum(Pre_disc_act[42] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[43])`, Responses: `r summary(Pre_disc_act[43])`. Percent Yes: `r round(sum(Pre_disc_act[43] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[44])`, Responses: `r summary(Pre_disc_act[44])`. Percent Yes: `r round(sum(Pre_disc_act[44] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[45])`, Responses: `r summary(Pre_disc_act[45])`. Percent Yes: `r round(sum(Pre_disc_act[45] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[46])`, Responses: `r summary(Pre_disc_act[46])`. Percent Yes: `r round(sum(Pre_disc_act[46] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[47])`, Responses: `r summary(Pre_disc_act[47])`. Percent Yes: `r round(sum(Pre_disc_act[47] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[48])`, Responses: `r summary(Pre_disc_act[48])`. Percent Yes: `r round(sum(Pre_disc_act[48] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[49])`, Responses: `r summary(Pre_disc_act[49])`. Percent Yes: `r round(sum(Pre_disc_act[49] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[50])`, Responses: `r summary(Pre_disc_act[50])`. Percent Yes: `r round(sum(Pre_disc_act[50] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[51])`, Responses: `r summary(Pre_disc_act[51])`. Percent Yes: `r round(sum(Pre_disc_act[51] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[52])`, Responses: `r summary(Pre_disc_act[52])`. Percent Yes: `r round(sum(Pre_disc_act[52] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[53])`, Responses: `r summary(Pre_disc_act[53])`. Percent Yes: `r round(sum(Pre_disc_act[53] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[54])`, Responses: `r summary(Pre_disc_act[54])`. Percent Yes: `r round(sum(Pre_disc_act[54] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[55])`, Responses: `r summary(Pre_disc_act[55])`. Percent Yes: `r round(sum(Pre_disc_act[55] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[56])`, Responses: `r summary(Pre_disc_act[56])`. Percent Yes: `r round(sum(Pre_disc_act[56] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[57])`, Responses: `r summary(Pre_disc_act[57])`. Percent Yes: `r round(sum(Pre_disc_act[57] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[58])`, Responses: `r summary(Pre_disc_act[58])`. Percent Yes: `r round(sum(Pre_disc_act[58] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[59])`, Responses: `r summary(Pre_disc_act[59])`. Percent Yes: `r round(sum(Pre_disc_act[59] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[60])`, Responses: `r summary(Pre_disc_act[60])`. Percent Yes: `r round(sum(Pre_disc_act[60] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[61])`, Responses: `r summary(Pre_disc_act[61])`. Percent Yes: `r round(sum(Pre_disc_act[61] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[62])`, Responses: `r summary(Pre_disc_act[62])`. Percent Yes: `r round(sum(Pre_disc_act[62] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[63])`, Responses: `r summary(Pre_disc_act[63])`. Percent Yes: `r round(sum(Pre_disc_act[63] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[64])`, Responses: `r summary(Pre_disc_act[64])`. Percent Yes: `r round(sum(Pre_disc_act[64] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[65])`, Responses: `r summary(Pre_disc_act[65])`. Percent Yes: `r round(sum(Pre_disc_act[65] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[66])`, Responses: `r summary(Pre_disc_act[66])`. Percent Yes: `r round(sum(Pre_disc_act[66] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[67])`, Responses: `r summary(Pre_disc_act[67])`. Percent Yes: `r round(sum(Pre_disc_act[67] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[68])`, Responses: `r summary(Pre_disc_act[68])`. Percent Yes: `r round(sum(Pre_disc_act[68] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[69])`, Responses: `r summary(Pre_disc_act[69])`. Percent Yes: `r round(sum(Pre_disc_act[69] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[70])`, Responses: `r summary(Pre_disc_act[70])`. Percent Yes: `r round(sum(Pre_disc_act[70] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[71])`, Responses: `r summary(Pre_disc_act[71])`. Percent Yes: `r round(sum(Pre_disc_act[71] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[72])`, Responses: `r summary(Pre_disc_act[72])`. Percent Yes: `r round(sum(Pre_disc_act[72] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[73])`, Responses: `r summary(Pre_disc_act[73])`. Percent Yes: `r round(sum(Pre_disc_act[73] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[74])`, Responses: `r summary(Pre_disc_act[74])`. Percent Yes: `r round(sum(Pre_disc_act[74] =="Yes") / G.Rows *100, digits = 2)`%  
+
+
+Variable: `r colnames(Pre_disc_act[11])`, Responses: `r summary(Pre_disc_act[11])`. Percent Yes: `r round(sum(Pre_disc_act[11] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[12])`, Responses: `r summary(Pre_disc_act[12])`. Percent Yes: `r round(sum(Pre_disc_act[12] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[13])`, Responses: `r summary(Pre_disc_act[13])`. Percent Yes: `r round(sum(Pre_disc_act[13] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[14])`, Responses: `r summary(Pre_disc_act[14])`. Percent Yes: `r round(sum(Pre_disc_act[14] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[15])`, Responses: `r summary(Pre_disc_act[15])`. Percent Yes: `r round(sum(Pre_disc_act[15] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[16])`, Responses: `r summary(Pre_disc_act[16])`. Percent Yes: `r round(sum(Pre_disc_act[16] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[17])`, Responses: `r summary(Pre_disc_act[17])`. Percent Yes: `r round(sum(Pre_disc_act[17] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[18])`, Responses: `r summary(Pre_disc_act[18])`. Percent Yes: `r round(sum(Pre_disc_act[18] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[19])`, Responses: `r summary(Pre_disc_act[19])`. Percent Yes: `r round(sum(Pre_disc_act[19] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[20])`, Responses: `r summary(Pre_disc_act[20])`. Percent Yes: `r round(sum(Pre_disc_act[20] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[21])`, Responses: `r summary(Pre_disc_act[21])`. Percent Yes: `r round(sum(Pre_disc_act[21] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[22])`, Responses: `r summary(Pre_disc_act[22])`. Percent Yes: `r round(sum(Pre_disc_act[22] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[23])`, Responses: `r summary(Pre_disc_act[23])`. Percent Yes: `r round(sum(Pre_disc_act[23] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[24])`, Responses: `r summary(Pre_disc_act[24])`. Percent Yes: `r round(sum(Pre_disc_act[24] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[25])`, Responses: `r summary(Pre_disc_act[25])`. Percent Yes: `r round(sum(Pre_disc_act[25] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[26])`, Responses: `r summary(Pre_disc_act[26])`. Percent Yes: `r round(sum(Pre_disc_act[26] =="Yes") / G.Rows *100, digits = 2)`%  
+Variable: `r colnames(Pre_disc_act[27])`, Responses: `r summary(Pre_disc_act[27])`. Percent Yes: `r round(sum(Pre_disc_act[27] =="Yes") / G.Rows *100, digits = 2)`%  
 
 
 
