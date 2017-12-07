@@ -1,0 +1,173 @@
+---
+title: "r@h Antecedents of disclosure"
+author: "Emma Elcombe"
+date: "December, 2017"
+output: word_document
+---
+
+## MECSH r@h Disclosures
+
+Set up R environment and load data (HV - SPSS v10, and disclosure ('srf 050917 v10))
+
+
+```{r Setup, include = FALSE}
+
+library(readxl)
+library(foreign)
+library(tidyr)
+library(dplyr)
+library(knitr)
+library(ggplot2)
+
+# Get data
+setwd("C:/Users/Tresi-Emma/Documents/MECSH/By Site/r@h/Nurse home visit activity data")
+getwd()
+SPSS_v10 = read.spss("SPSS_r@h_June17 - v10 new fidelity.sav", to.data.frame=TRUE)
+setwd("C:/Users/Tresi-Emma/Documents/MECSH/By Site/r@h/Risk Factors/Mother vulnerablity data")
+SPSS_srf = read.spss("srf 050917 v10 EE - taller v2.sav", to.data.frame=TRUE)
+setwd("C:/Users/Tresi-Emma/Documents/R for MECSH/BG")
+```
+
+### number of particpants in each file
+
+```{r, include=FALSE}
+
+Px_v10 <- SPSS_v10 %>% group_by(ResearchID) %>% summarise(VisitCount=n())
+Px_srf <- SPSS_srf %>% group_by(ResearchID, RiskRecorded) %>% summarise(n=n()) %>% spread(RiskRecorded,n )
+B.Rows_Px_srf <- max(row(Px_srf))
+A.Rows_Px_v10 <- max(row(Px_v10))
+```
+
+Number of participants in 'r@h RCT' file = `r A.Rows_Px_v10`  
+Number of participants in srf file = `r B.Rows_Px_srf`   
+
+
+### Risks per mother
+
+```{r, include=FALSE}
+Px_risks <- SPSS_srf %>% group_by(ResearchID, RiskRecorded) %>% summarise(n=n()) %>% spread(RiskRecorded,n )
+Px_risks <- Px_risks %>% group_by(Yes) %>% summarise(n=n())
+D.Rcd_cnt <- colSums(Px_risks[,2])
+# replace missing with zero
+Px_risks$Yes[is.na(Px_risks$Yes)] <- 0
+
+ggplot(Px_risks, aes(x=Yes, y=n)) + geom_step() + ggtitle("Disclosures per mother") + xlab("number of disclosures") + ylab("number of mothers")
+
+C.Px_no_risk <- Px_risks[max(row(Px_risks)),2]
+
+```
+
+In total `r D.Rcd_cnt` disclosures were recorded for `r B.Rows_Px_srf - C.Px_no_risk` of the `r B.Rows_Px_srf`  participants
+
+
+##### Clean data
+
+The full detiails of this are in the word document and SPSS data and syntax files withi the directory "C:\Users\Tresi-Emma\Documents\MECSH\By Site\r@h\Risk Factors\Mother vulnerablity data"
+
+```{r, include=FALSE}
+df_srf <- SPSS_srf %>% filter(IncludeData == "Yes")
+D.Rows_df_srf <- max(row(df_srf))
+Px_df_srf <- df_srf %>% group_by(ResearchID) %>% summarise(n=n()) 
+Px_df_srf %>% group_by(n) %>% summarise(r=n()) 
+E.Rows_Px_srf <- max(row(Px_df_srf))
+```
+
+#### Result
+
+Once data was cleaned to remove partipciants which had too complex a case record to work within this analysis, and records without dates (or dates which occured too early). There were `r D.Rows_df_srf` records for `r E.Rows_Px_srf` participants remaining
+
+###### distribution of risk 
+
+```{r}
+ggplot(Px_risks, aes(x=Yes, y=n)) + geom_step() + ggtitle("Disclosures per mother") + xlab("number of disclosures") + ylab("number of mothers")
+
+```
+
+
+
+### Risks Disclosed
+
+```{r, include=FALSE}
+Risk_tbl <- SPSS_srf %>% filter(IncludeData == "Yes") %>% group_by(Regarding, Risk_Factor) %>% summarise(n=n()) %>% spread(Regarding, n)
+Risk_tbl$Total <- rowSums(Risk_tbl[2:4], na.rm = TRUE )
+Risk_tbl$Row <- seq.int(nrow(Risk_tbl))
+Risk_tbl <- Risk_tbl[c(6,1,2,3,4,5)]
+```
+
+Risks Recorded `r kable(Risk_tbl)`
+
+
+### Major risk 1: Domestic Violence
+
+#### Create table of disclosures
+```{r}
+# read numbers from table in R markdown output
+DV_rcd <- df_srf %>% filter(as.numeric(Risk_Factor) == 4 | as.numeric(Risk_Factor) == 8)
+rows_fetched <- max(row(DV_rcd))
+
+test_date <- DV_rcd[1,"DateDisclosed_Single"]
+  
+SPSS_v10 %>% filter(ResearchID == 144 & Valid_new == "Valid" & date_of_visit<test_date) %>% arrange(desc(date_of_visit))
+
+
+```
+
+#### Find records prior to disclosure, record count and details
+
+```{r}
+
+  # for each site...
+  get_site_data <- function(DV_rcd_df,row_num) {
+    # get the ID and Date
+    Px_id <- DV_rcd_df[row_num,]$ResearchID
+    Date_Dsc <- DV_rcd_df[row_num,]$DateDisclosed_Single
+    # get data 
+    this_row_df <- SPSS_v10 %>% filter(ResearchID == Px_id & Valid_new == "Valid" & date_of_visit < Date_Dsc) %>% arrange(desc(date_of_visit))
+    if(nrow(this_row_df) > 0) this_row_df$Row <- seq.int(nrow(this_row_df))
+     # add recoding and value-adding code here
+    Px_HV_cnt <- nrow(this_row_df)
+     #this_site_df$site <- paste(sites_df[site_num,]$site)
+     #this_site_df[, 6:11][this_site_df[, 6:11] == "NA"] <- NA
+     #this_site_df$time_start <- NULL
+    # return the dataframe
+    return(list(this_row_df, Px_HV_cnt))
+  }
+
+rm(fetched_data, Px_HV_cnt)
+
+for (i in seq_len(rows_fetched)) {
+      
+      if (exists("fetched_data")) {
+        fetched_data <- rbind(fetched_data, get_site_data(DV_rcd,i)[[1]])
+        Px_HV_cnt <- rbind(Px_HV_cnt, get_site_data(DV_rcd,i)[[2]])
+      } else {
+        fetched_data <- get_site_data(DV_rcd,i)[[1]]
+        Px_HV_cnt <- get_site_data(DV_rcd,i)[[2]]
+      }
+    } 
+
+DV_rcd$Px_HV_cnt <- Px_HV_cnt
+
+fetched_data <- fetched_data[c(393,3:13,20:392)]
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
