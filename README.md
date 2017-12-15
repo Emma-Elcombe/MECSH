@@ -11,12 +11,13 @@ This will cover
  
 ## Folder Structure
 
-This project runs in "C:/Users/Tresi-Emma/Documents/R for MECSH/MECSH"
+This project runs in "C:/R/Rprojects/MECSH"
 
-Inside folder 'R for MECSH' are the following folders
-  +MECSH     - contains code
+Inside folder 'R' are the following folders
+  +Rprojects - contains project and associated code
   +Reference - contains reference input files, eg 'sites'
+  +Reports   - output report files
   +Load      - contains files to be loaded into R
   +Archive   - contains files which have been used are now held for backup only
-  +Log       - Contains log file/s
+  +Log       - Contains log files
   
