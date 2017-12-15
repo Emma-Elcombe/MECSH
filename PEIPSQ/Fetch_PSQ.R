@@ -10,7 +10,7 @@ library(futile.logger)
 #  by default, script is logged at the INFO level
 #  All ERROR messages are also reported to Error folder, see log_and_quit().
 
-setwd("C:/Users/Tresi-Emma/Documents/R for MECSH")
+setwd("C:/R")
 try(rm(err_msg))
 
 ## start log file
@@ -28,13 +28,13 @@ log_and_quit <- function() {
     err_msg <- geterrmessage()
   }
   flog.error("Fatal Error: %s", err_msg, name='logger.c')
-  setwd("C:/Users/Tresi-Emma/Documents/Interfaces")
+  setwd("C:/R/BatchInterfaces/PEIPSQ")
   flog.appender(appender.file("PSQ_fetch.txt"), name='logger.a')
   flog.info("Failure", name='logger.a')
-  setwd("C:/Users/Tresi-Emma/Desktop")
+  setwd("//ad.uws.edu.au/dfshare/HomesCMB$/30042685/Desktop")
   flog.appender(appender.file("PSQ FETCH FAILED.log"), name='logger.b')
   flog.error("PSQ Fetch failed: %s", err_msg, name='logger.b')
-  setwd("C:/Users/Tresi-Emma/Documents/R for MECSH")
+  setwd("C:/R")
   #options(error = recover)
 }
 options(error = log_and_quit)
@@ -577,18 +577,18 @@ Extract_Load_Data <- function(){
   
   # export PSQ data to load folder
   PSQ_file_name <- paste("Load/PSQ_Data.csv", sep = "")
-  write.table(merged, file = PSQ_file_name, sep="\t", row.names = FALSE)
+  write.table(merged, file = PSQ_file_name, sep=",", row.names = FALSE)
   flog.info("File %s saved into Load folder", PSQ_file_name, name='logger.c')
   
   # export PSQ data to archive folder
   PSQ_file_name <- paste("Archive/PSQ_Data ", extract_date,".csv", sep = "")
-  write.table(merged, file = PSQ_file_name, sep="\t", row.names = FALSE)
+  write.table(merged, file = PSQ_file_name, sep=",", row.names = FALSE)
   flog.info("File %s saved into Archive folder", PSQ_file_name, name='logger.c')
   flog.info("END", PSQ_file_name, name='logger.c')
   
-  setwd("C:/Users/Tresi-Emma/Documents/Interfaces")
+  setwd("C:/R/BatchInterfaces/PEIPSQ")
   flog.appender(appender.file("PSQ_fetch.txt"), name='logger.a')
-  flog.error("Success", name='logger.a')
+  flog.info("Success", name='logger.a')
   
 }
 

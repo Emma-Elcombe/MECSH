@@ -10,7 +10,7 @@ library(futile.logger)
 #  by default, script is logged at the INFO level
 #  All ERROR messages are also reported to Error folder, see log_and_quit().
 
-setwd("C:/Users/Tresi-Emma/Documents/R for MECSH")
+setwd("C:/R")
 try(rm(err_msg))
 
 ## start log file
@@ -28,13 +28,13 @@ log_and_quit <- function() {
     err_msg <- geterrmessage()
   }
   flog.error("Fatal Error: %s", err_msg, name='logger.c')
-  setwd("C:/Users/Tresi-Emma/Documents/Interfaces")
+  setwd("C:/R/BatchInterfaces/PEIPSQ")
   flog.appender(appender.file("PEI_fetch.txt"), name='logger.a')
   flog.info("Failure", name='logger.a')
-  setwd("C:/Users/Tresi-Emma/Desktop")
+  setwd("//ad.uws.edu.au/dfshare/HomesCMB$/30042685/Desktop")
   flog.appender(appender.file("PEI FETCH FAILED.log"), name='logger.b')
   flog.error("PEI Fetch failed: %s", err_msg, name='logger.b')
-  setwd("C:/Users/Tresi-Emma/Documents/R for MECSH")
+  setwd("C:/R")
 }
 options(error = log_and_quit)
 
@@ -659,9 +659,9 @@ Extract_Load_Data <- function(){
   flog.info("File %s saved into Archive folder", PEI_file_name, name='logger.c')
   flog.info("END", PEI_file_name, name='logger.c')
   
-  setwd("C:/Users/Tresi-Emma/Documents/Interfaces")
+  setwd("C:/R/BatchInterfaces/PEIPSQ")
   flog.appender(appender.file("PEI_fetch.txt"), name='logger.a')
-  flog.error("Success", name='logger.a')
+  flog.info("Success", name='logger.a')
   
 }
 
