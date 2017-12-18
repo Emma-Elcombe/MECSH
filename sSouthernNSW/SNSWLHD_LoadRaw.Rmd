@@ -1,0 +1,186 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+
+
+```{r set up, include=FALSE}
+
+library(readxl)
+library(dplyr)
+library(knitr)
+library(tidyr)
+library(lubridate)
+library(ggplot2)
+setwd("C:/R")
+```
+
+
+## PART A - Load raw data files
+
+####Load base file 
+```{r, include=FALSE}
+rm(data)
+data <- read_excel("C:/R/Rprojects/MECSH/sSouthernNSW/raw_data/MESCH Reports_SNSWLHD_Part 1 2016_2017_AG 6.xlsx", sheet = "Cooma Q1")
+
+temp <- read_excel("C:/R/Rprojects/MECSH/sSouthernNSW/raw_data/MESCH Reports_SNSWLHD_Part 1 2016_2017_AG 6.xlsx", sheet = "Cooma Q2")
+data <- rbind(data, temp)
+temp <- read_excel("C:/R/Rprojects/MECSH/sSouthernNSW/raw_data/MESCH Reports_SNSWLHD_Part 1 2016_2017_AG 6.xlsx", sheet = "Cooma Q3")
+data <- rbind(data, temp)
+temp <- read_excel("C:/R/Rprojects/MECSH/sSouthernNSW/raw_data/MESCH Reports_SNSWLHD_Part 1 2016_2017_AG 6.xlsx", sheet = "Cooma Q4")
+data <- rbind(data, temp)
+temp <- read_excel("C:/R/Rprojects/MECSH/sSouthernNSW/raw_data/MESCH Reports_SNSWLHD_Part 1 2016_2017_AG 6.xlsx", sheet = "Bombala FinY")
+data <- rbind(data, temp)
+
+temp <- read_excel("C:/R/Rprojects/MECSH/sSouthernNSW/raw_data/MESCH Reports_SNSWLHD_Part 1 2016_2017_AG 6.xlsx", sheet = "Braidwood FinY")
+data <- rbind(data, temp)
+temp <- read_excel("C:/R/Rprojects/MECSH/sSouthernNSW/raw_data/MESCH Reports_SNSWLHD_Part 1 2016_2017_AG 6.xlsx", sheet = "Crookwell FinY")
+data <- rbind(data, temp)
+temp <- read_excel("C:/R/Rprojects/MECSH/sSouthernNSW/raw_data/MESCH Reports_SNSWLHD_Part 1 2016_2017_AG 6.xlsx", sheet = "Delegate FinY")
+data <- rbind(data, temp)
+temp <- read_excel("C:/R/Rprojects/MECSH/sSouthernNSW/raw_data/MESCH Reports_SNSWLHD_Part 1 2016_2017_AG 6.xlsx", sheet = "QB FinY")
+data <- rbind(data, temp)
+
+temp <- read_excel("C:/R/Rprojects/MECSH/sSouthernNSW/raw_data/MESCH Reports_SNSWLHD_Part 2 2016_2017_AG 6.xlsx", sheet = "BV Q1_2")
+data <- rbind(data, temp)
+temp <- read_excel("C:/R/Rprojects/MECSH/sSouthernNSW/raw_data/MESCH Reports_SNSWLHD_Part 2 2016_2017_AG 6.xlsx", sheet = "BV Q3_4")
+data <- rbind(data, temp)
+temp <- read_excel("C:/R/Rprojects/MECSH/sSouthernNSW/raw_data/MESCH Reports_SNSWLHD_Part 2 2016_2017_AG 6.xlsx", sheet = "EB Q1_2")
+data <- rbind(data, temp)
+temp <- read_excel("C:/R/Rprojects/MECSH/sSouthernNSW/raw_data/MESCH Reports_SNSWLHD_Part 2 2016_2017_AG 6.xlsx", sheet = "EB Q3_4")
+data <- rbind(data, temp)
+temp <- read_excel("C:/R/Rprojects/MECSH/sSouthernNSW/raw_data/MESCH Reports_SNSWLHD_Part 2 2016_2017_AG 6.xlsx", sheet = "GB Q1_2")
+data <- rbind(data, temp)
+temp <- read_excel("C:/R/Rprojects/MECSH/sSouthernNSW/raw_data/MESCH Reports_SNSWLHD_Part 2 2016_2017_AG 6.xlsx", sheet = "GB Q3_4")
+data <- rbind(data, temp)
+temp <- read_excel("C:/R/Rprojects/MECSH/sSouthernNSW/raw_data/MESCH Reports_SNSWLHD_Part 2 2016_2017_AG 6.xlsx", sheet = "Yass")
+data <- rbind(data, temp)
+
+temp <- read_excel("C:/R/Rprojects/MECSH/sSouthernNSW/raw_data/MESCH Reports_SNSWLHD_Part 3 AbH services 2016_2017_AG 6.xlsx", sheet = "EB AbH FinY")
+data <- rbind(data, temp)
+rm(temp)
+```
+
+`r nrow(data)` rows of data loaded.  
+
+ 
+
+```{r, , include=FALSE}
+data$site <- substring(data$FACILITY,1,6)
+site_summ <- data %>% group_by(site) %>% summarise(n=n())
+```
+ 
+#### Clean data
+
+```{r create summary table with only variables needed, include=FALSE}
+data_summ <- data[c("DATE_RANGE","site","MRN","DOB","REG_DT_TM","REFERRAL_RECEIPT_DT","DISCH_DT_TM", "POWERFORM_NAME","POWERFORM_DT_TM","SERVICE_DELIVERY_MODE","MOS_DURATION","SERV_START_DT_TM","FORM_ID","ENCNTR_ID")]
+
+# remove 'no client contact' rows from the Service_Delivery_Mode column
+data_clean <- data_summ %>% filter(substr(SERVICE_DELIVERY_MODE,1,18) != "No Client Contact ") 
+rows_NoContact <- sum(substr(data_summ$SERVICE_DELIVERY_MODE,1,18)== "No Client Contact ")
+
+# number of duplicate rows remaining
+temp <- data_clean %>% group_by(site, MRN, SERV_START_DT_TM) %>% summarise(n=n()) %>% filter(n>1) 
+rows_SameDay <- nrow(temp)
+
+data_clean$dup <- duplicated(data_clean[c("site", "MRN", "SERV_START_DT_TM")])
+
+rows_dups <- sum(data_clean$dup)
+
+data_clean <- data_clean %>% filter(dup == FALSE)
+
+```
+  
+Step 1: remove invalid records
+
+In total `r rows_NoContact` rows had a 'service delivery mode' starting with 'No Client Contact'. These records were removed. Of the remaining records there were `r rows_SameDay` sets of duplicate records, ie records that occured on the same day for the same Mother/family.   
+For this report, records were de-duplified in a random fashion (ie not based on any particular variable), with a total of `r rows_dups` records being removed.   
+
+These process left a total of `r nrow(data_clean)` records remaining.  
+  
+
+### Summary data
+
+#### Participants per site, and visits per particpant
+
+```{r, include=FALSE}
+Px_vis_summary <- data_clean %>% group_by(site, MRN) %>% summarise(visit_count=n())
+#data_summ %>% group_by(site, MRN, ENCNTR_ID) %>% summarise(visit_count=n())
+# if both tables above produce the same number of rows we can assume that encounter ID is paried 1 to 1 with MRN.
+
+Px_summary <- Px_vis_summary %>% group_by(site) %>% summarise("Number of Participants"=n(), total_visits = sum(visit_count), "Avg visits per px"= round(mean(visit_count), digits=2))
+
+```
+
+##### Participant summary table
+
+`r kable(Px_summary)`
+
+
+### Participant details
+
+```{r, include=FALSE}
+rows_px <- data_clean %>% group_by(site, MRN) %>% summarise(n=n())
+Px_data <- data_clean %>% group_by(site, MRN, DOB, REG_DT_TM, DISCH_DT_TM) %>% summarise(DateFirstVisit=min(SERV_START_DT_TM), DateLastVisit=max(SERV_START_DT_TM),VisitCount=n())
+
+# Enrollment
+Enroll <- Px_data %>% select(site, REG_DT_TM) %>% mutate(qtr = as.character(quarter(REG_DT_TM, with_year = TRUE))) %>% group_by(site, qtr) %>%  summarise(count=n())
+
+```
+
+In total there are `r nrow(rows_px)` participants who have recived a Home visit for MECSH in Southern NSW LHD.  
+
+The following graph shows the number of participants that have been visited at least once in Southern NSW LHD. It is based off the registration date (REG_DT_TM) and only includes those participants whose visits were allocated to associate grp6.
+
+```{r, echo=FALSE}
+
+ggplot(data=Enroll, aes(x=qtr, y=count, group=site, colour=site)) +
+    geom_line() +
+    geom_point() +
+    xlab("Year.Quater") + ylab("px enrolled") + ggtitle("Number of Px enrolled each Qtr")
+
+```
+
+  
+  
+To be able to conduct a more complete analysis the following are needed:  
+A. A full list of participants (the data provided so far does not show the participants which are/were enrolled, but have not yet been seen)  
+B. Mother Due Date (EDD)  
+C. Child Date of Birth  
+
+
+### Home visit details
+
+The following graph shows the number of home visits completed by each site per quarter.  
+If no dot can be seen for a quarter, the number of visits was zero.  
+
+
+```{r, echo=FALSE}
+
+HV_data <- data_clean %>% mutate(qtr = as.character(quarter(REG_DT_TM, with_year = TRUE))) %>% group_by(site, qtr) %>% summarise(VisitCount=n()) 
+
+# Enrollment
+Enroll <- Px_data %>% mutate(qtr = as.character(quarter(REG_DT_TM, with_year = TRUE))) %>% group_by(site, qtr) %>%  summarise(count=n())
+
+ggplot(data=HV_data, aes(x=qtr, y=VisitCount, group=site, colour=site)) +
+    geom_line() +
+    geom_point() +
+    xlab("Year.Quater") + ylab("number of visits per quarter") + ggtitle("Number of Home Visits recorded each Qtr")
+
+```
+
+##### Participant detail table
+
+```{r, include=FALSE}
+Px_data$REG_DT_TM <- round(Px_data$REG_DT_TM, "day")
+Px_data$DateFirstVisit <- round(Px_data$DateFirstVisit, "day")
+Px_data$DateLastVisit <- round(Px_data$DateLastVisit, "day")
+#Px_data$Px_disch <- if(!is.na(Px_data$DISCH_DT_TM)) "discharged"
+
+```
+
+
+`r kable(Px_data)`
+
+
