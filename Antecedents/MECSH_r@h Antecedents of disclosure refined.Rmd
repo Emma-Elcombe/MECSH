@@ -3,11 +3,14 @@ title: "MECSH r@h Antecedents refined"
 author: "Emma Elcombe"
 date: "December, 2017"
 output: word_document
+params:
+   Vars: !r c(4,8)
+   topic: !r "Domestic Violence"
 ---
 
 ## MECSH r@h Disclosures
 
-Set up R environment and load data (HV - SPSS v10, and disclosure ('srf 050917 v10))
+Set up R environment and load data home visit data (SPSS_r@h - v10), and disclosure data (srf 050917 v10)
 
 
 ```{r Setup, include = FALSE}
@@ -62,7 +65,7 @@ Disclosures were recorded for `r B.Rows_Px_srf - C.Px_no_risk` of the `r B.Rows_
 
 ##### Clean vulnerability data
 
-The full details of this are in the word document and SPSS data and syntax files withi the directory "C:\Users\Documents\MECSH\By Site\r@h\Risk Factors\Mother vulnerablity data"
+The full details of this are in the word document and SPSS data and syntax files within the directory 'C:/Users/Documents/MECSH/By Site/r@h/Risk Factors/Mother vulnerablity data'.  In short, data was included if the column 'IncludeData' equaled 'Yes'.
 
 ```{r, include=FALSE}
 df_srf <- SPSS_srf %>% filter(IncludeData == "Yes")
@@ -74,24 +77,26 @@ E.Rows_Px_srf <- max(row(Px_df_srf))
 
 ##### Result of cleaning
 
-Once data was cleaned to remove particiants who had too complex a case record to work within this analysis, and records without dates (or dates which occured too early). There were `r D.Rows_df_srf` records for `r E.Rows_Px_srf` participants remaining
+Once data was cleaned to remove particiants (2) with case records too complex to work within this analysis, and records without dates (or dates which occured too early). There were `r D.Rows_df_srf` records for `r E.Rows_Px_srf` participants remaining
 
-###### distribution of risk 
+#### Distribution of risk disclosure
 
-```{r}
-ggplot(Px_risks, aes(x=Yes, y=n)) + geom_step() + ggtitle("Disclosures per mother") + xlab("number of disclosures") + ylab("number of mothers")
+```{r, echo=FALSE}
+ggplot(Px_risks, aes(x=Yes, y=n)) + geom_area(fill = "sky blue") + ggtitle("Disclosures per mother") + xlab("number of disclosures") + ylab("number of mothers")
 
 ```
 
 
 
-### Risks Disclosed
+### Risks Disclosed - by category
 
 ```{r, include=FALSE}
 Risk_tbl <- SPSS_srf %>% filter(IncludeData == "Yes") %>% group_by(Regarding, Risk_Factor) %>% summarise(n=n()) %>% spread(Regarding, n)
+#Risk_tbl <- rbind(Risk_tbl, data.frame(Risk_Factor="Total",t(colSums(Risk_tbl[,-1]))))
 Risk_tbl$Total <- rowSums(Risk_tbl[2:4], na.rm = TRUE )
 Risk_tbl$Row <- seq.int(nrow(Risk_tbl))
 Risk_tbl <- Risk_tbl[c(6,1,2,3,4,5)]
+
 ```
 
 The following date was disclosed my mothers or parents to the nurse home visitors.   
@@ -99,13 +104,15 @@ The following date was disclosed my mothers or parents to the nurse home visitor
 Risks Recorded `r kable(Risk_tbl)`
 
 
-### Home Visits
+### Home Visit data
 
-#### Cleaning SPSS_v10 HV table
+##### Cleaning SPSS_v10 HV table
 
 ```{r, include=FALSE}
 v10_summ <- SPSS_v10 %>% select(Valid_Check_new, Valid_new) %>% group_by(Valid_Check_new, Valid_new) %>% summarise(n=n()) %>% spread(Valid_new, n)
+#v10_summ <- rbind(v10_summ, data.frame(Valid_Check_new="Total",t(colSums(v10_summ[,-1]))))
 SPSS_HV <- SPSS_v10 %>% filter(as.numeric(Valid_Check_new) %in% c(1,6,7,8,9,10))
+Risk_tbl
   # trim SPSS HV file
   SPSS_HV <- SPSS_HV[c(1:10, 215:231, 251, 255:297)]
   sum(duplicated(SPSS_HV$Table_ID))
@@ -119,17 +126,17 @@ After removing the records falgged as A.Missing, B.No Visit content, c.Low act, 
 
 
 
-### Find records prior to disclosure, record count and details
+### Antecedents of disclosure
 
 ##### aim of code
 
 Determine if the activities which occured in the HV's just prior to disclosure, or at disclosure' were different from the activities which occured at other times in the program.
 
-For each disclosure (row in table `var_rcd`) determine
- a. which rows in the HV table happened at disclosure, and
+For each disclosure determine  
+ a. which rows in the HV table happened at disclosure, and  
  b. which row/s happened before
  
- record the number the rows returned, based on their chronological date
+ Record the number the rows returned, based on their chronological date
  allow for some rows in HV table to fall into multiple categories (as risks can be disclosed more than once by the same mother/family)
 
 
@@ -151,20 +158,18 @@ F. join this data to main HV table
 
 G. analyse odds of activity occuring in the 3 seperate categories (Normal, At or Before)
 
-#### worked example: Domestic Violence
+### `r params$topic`
 
 ##### A. Create table of disclosures
 ```{r, include=FALSE}
-# set varaibles
-topic <- "Domestic Violence"
-Vars <- c(20,22)
 
 get_disclosures <- function(Vars){
   var_rcd <- df_srf %>% filter(as.numeric(Risk_Factor) %in% Vars)
   return(var_rcd)
 }
-var_list <- as.data.frame(Risk_tbl)[c(Vars),2]
-var_rcd <- get_disclosures(Vars)
+var_list <- as.data.frame(Risk_tbl)[c(params$Vars),2]
+var_rcd <- get_disclosures(params$Vars)
+age_disc <- mean(var_rcd$Age_at_Disclosure)
 
   F.disc_rows <- nrow(var_rcd)
   Px_var <- var_rcd %>% group_by(ResearchID) %>% summarise(count=n())
@@ -175,10 +180,18 @@ var_rcd <- get_disclosures(Vars)
 ```
 
 
-In total, `r F.disc_rows` records were returned for `r topic` (`r var_list`).    
+In total, `r F.disc_rows` records were returned for `r params$topic` (`r var_list`).    
 This includes disclosures for `r G.Px_var` Families.  
 
 Distribution of disclosures `r kable(Px_var_dist)`
+
+The average age of the child at disclosure was `r age_disc`.  
+
+```{r, echo=FALSE}
+
+ggplot(var_rcd, aes(Age_at_Disclosure)) + geom_histogram(binwidth = 6, fill = "sky blue", color = "DeepSkyBlue") + labs(x="Age at Disclosure (weeks)", title = "Distribution of disclosure by child age")
+
+```
 
 
 ##### B, C and D. Find HV records, label and return, bind
@@ -229,13 +242,20 @@ var_rcd$Px_Bf_cnt <- Px_Bf_cnt
 var_rcd$Px_At_cnt <- Px_At_cnt
 #move Px_.._cnt columns to front
 var_rcd <- var_rcd[c(37,38,1:36)]
-
+HVs_disc <- fetched_data %>% group_by(ResearchID) %>% summarise(n=n(), max=max(PreHV))
 H.All_Rows <- nrow(fetched_data)
 ```
 
 In total, `r H.All_Rows` HV's occured on the day or prior to these disclosures.   
 This includes `r colSums(Px_At_cnt)` on the day of disclosure, and `r colSums(Px_Bf_cnt)` before.  
 
+The average number of Home visits priot to disclosure was `r round(mean(HVs_disc$max), digits=3)`.  
+
+```{r, echo=FALSE}
+
+ggplot(HVs_disc, aes(max)) + geom_histogram(binwidth = 2, fill = "sky blue", color = "DeepSkyBlue") + labs(x="HVs at Disclosure", title = "Distribution of disclosure by number of preceeding HVs") 
+
+```
 
 ##### E. trim records and remove duplicates.
 ```{r, include=FALSE}
@@ -295,7 +315,7 @@ NOTE: HV's should add to `r nrow(SPSS_HV)`, Participants columns will add to mor
 
 The Data table developed above has three categories for Home Visits. For this round of analyses the Home Visits which occured At and Before the disclosure have been combined into 1 group.  All Home Visits are therefore categorised as either, associated with disclosure (Ass) or not associated with disclosure (normal).
 
-2x2 contingency table for `r topic` and activity mat_well_4.
+2x2 contingency table for `r params$topic` and activity mat_well_4.
 
 ```{r, include=FALSE}
 #pre data table
@@ -340,151 +360,5 @@ odds_ratio_val <-  odds_ratio_val[2:59,]
 ```
 
 `r kable(odds_ratio_val)`  
-  
-    
-### Major Risks
-
-#### Drugs and Alcohol
-
-##### A. Create table of disclosures
-```{r, include=FALSE}
-# set varaibles
-topic <- "Drugs and Alcohol"
-Vars <- c(2,14,35)
-var_list <- as.data.frame(Risk_tbl)[c(Vars),2]
-var_rcd <- get_disclosures(Vars)
-
-  F.disc_rows <- nrow(var_rcd)
-  Px_var <- var_rcd %>% group_by(ResearchID) %>% summarise(count=n())
-  G.Px_var <- nrow(Px_var)
-  Px_var_dist <- Px_var %>% group_by(count) %>% summarise(n=n())
-  Px_var_dist <- rbind(Px_var_dist, data.frame(count="Total",t(colSums(Px_var_dist[,-1]))))
-
-```
-
-
-In total, `r F.disc_rows` records were returned for `r topic` (`r var_list`).    
-This includes disclosures for `r G.Px_var` Families.  
-
-Distribution of disclosures `r kable(Px_var_dist)`
-
-
-##### B, C and D. Find HV records, label and return, bind
-```{r, include=FALSE}
-
-try(rm(fetched_data, before_df, Px_Bf_cnt, at_df, Px_At_cnt))
-
-for (i in seq_len(F.disc_rows)) {
-      if (exists("fetched_data")) {
-        fetched_data <- rbind(fetched_data, get_site_data(var_rcd,i)[[1]])
-        fetched_data <- rbind(fetched_data, get_site_data(var_rcd,i)[[3]])
-       } else {
-        fetched_data <- get_site_data(var_rcd,i)[[1]]
-        fetched_data <- rbind(fetched_data, get_site_data(var_rcd,i)[[3]])
-      }
-  if (exists("Px_Bf_cnt")) {
-        Px_Bf_cnt <- rbind(Px_Bf_cnt, get_site_data(var_rcd,i)[[2]])
-        } else {
-        Px_Bf_cnt <- get_site_data(var_rcd,i)[[2]]
-        }
-  if (exists("Px_At_cnt")) {
-        Px_At_cnt <- rbind(Px_At_cnt, get_site_data(var_rcd,i)[[4]])
-      } else {
-        Px_At_cnt <- get_site_data(var_rcd,i)[[4]]
-      }
-    } 
-
-var_rcd$Px_Bf_cnt <- Px_Bf_cnt
-var_rcd$Px_At_cnt <- Px_At_cnt
-#move Px_.._cnt columns to front
-var_rcd <- var_rcd[c(37,38,1:36)]
-
-H.All_Rows <- nrow(fetched_data)
-```
-
-In total, `r H.All_Rows` HV's occured on the day or prior to these disclosures.   
-This includes `r colSums(Px_At_cnt)` on the day of disclosure, and `r colSums(Px_Bf_cnt)` before.  
-
-
-##### E. trim records and remove duplicates.
-```{r, include=FALSE}
-# filter for 'day of' and 'previous 3' records
-Pre_disc_act <- fetched_data %>% filter(PreHV <= 3) 
-I.Rows_pre_disc <- nrow(Pre_disc_act)
-J.Rows_At <- nrow(Pre_disc_act %>% filter(PreHV==0))
-K.Rows_Bf <- nrow(Pre_disc_act %>% filter(PreHV>0))
-
-
-#remove duplicates
-L.test_dups <- sum(duplicated(Pre_disc_act$Table_ID))
-Pre_disc_act <- Pre_disc_act %>% mutate(dups = duplicated(Pre_disc_act[,1:4])) %>% filter(dups==FALSE)
-M.Rows_pre_disc <- nrow(Pre_disc_act)
-
-spss2date <- function(x) as.Date(x/86400, origin = "1582-10-14")
-Pre_disc_act$date_of_visit <- spss2date(Pre_disc_act$date_of_visit)
-
-N.Rows_At <- nrow(Pre_disc_act %>% filter(PreHV==0))
-O.Rows_Bf <- nrow(Pre_disc_act %>% filter(PreHV>0))
-
-```
-
-After trimming the HV records to include only visits that occured on the day of disclosure, or were one one of (up to) three vists which occured prior, there are `r  I.Rows_pre_disc` HV records. This includes `r J.Rows_At` on the day of disclosure, and `r K.Rows_Bf` before.  
-After removing the HV's that occur twice, there are `r M.Rows_pre_disc` HVs to analyse.  This includes `r N.Rows_At` on the day of disclosure, and `r O.Rows_Bf` before.  
-CHECK: The difference between `r  I.Rows_pre_disc` and `r M.Rows_pre_disc` should be `r L.test_dups` (the number of duplicates).
-  
-
-```{r, include=FALSE}
-
-# check there are no duplicates in fetched data
-P.test_dups <- sum(duplicated(Pre_disc_act$Table_ID))
-
-merged <- SPSS_HV %>% left_join(Pre_disc_act[c(1,2,5)], by = "Table_ID")
-merged$Category <- "Normal"
-merged$Category <- as.factor(ifelse(is.na(merged$PreHV), "Normal", 
-                ifelse(merged$PreHV == 0, "At", 
-                  ifelse(merged$PreHV > 0, "Before","CHECK"))))
-merged$Bi_Categ <- as.factor(ifelse(is.na(merged$PreHV), "Normal","Associated"))
-HV_type <- merged %>% group_by(ResearchID.x, Category) %>% summarise(HVs=n()) %>% group_by(Category) %>% summarise(Participants=n(), HVs=sum(HVs))
-HV_type <- rbind(HV_type, data.frame(Category="Total",t(colSums(HV_type[,-1]))))
-```
-
-CHECK: This value should be zero: `r P.test_dups`.  
-
-   
-`r kable(HV_type)`   
-
-
-  
-##### G. analyse odds of activity occuring in the 3 seperate categories (Not Associated, At or Before)
-
-
-```{r, include=FALSE}
-
-odds_ratio_val <- data.frame(activity=0, ass_perc=0, norm_perc=0, OddsRatio=0)
-
-#testing only
-temp %>% group_by(Bi_Categ, ref_3) %>% summarise(n=n()) 
-
-#loop for all activities
-for (i in  2 : ncol(temp)) {
-  temp_df <- temp %>% group_by(Bi_Categ, temp[,i]) %>% summarise(n=n()) 
-  perc_yes_ass <- round(temp_df[2,"n"]/(temp_df[1,"n"]+temp_df[2,"n"])*100, digits = 2)
-  perc_yes_norm <- round((temp_df[4,"n"])/(temp_df[3,"n"]+temp_df[4,"n"])*100, digits = 2)
-  #OR = (a/b)/(c/d) = ((Ass + Yes)/(Ass + No))/((Norm + Yes)/(Norm + No))
-  OR <- round(((temp_df[2,"n"])/(temp_df[1,"n"]))/((temp_df[4,"n"])/(temp_df[3,"n"])), digits = 2)
- odds_ratio_val[i,4] <- OR
- odds_ratio_val[i,1] <- colnames(temp[i])
- odds_ratio_val[i,2] <- perc_yes_ass
- odds_ratio_val[i,3] <- perc_yes_norm
- #print(odds_ratio_val)
-}
-odds_ratio_val <-  odds_ratio_val[2:59,]
-#print(odds_ratio_val) 
-```
-   
-Odds Ratio table  
-
-`r kable(odds_ratio_val)`  
-  
   
 
