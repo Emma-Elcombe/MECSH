@@ -163,7 +163,7 @@ get_disclosures <- function(Vars){
   var_rcd <- df_srf %>% filter(as.numeric(Risk_Factor) %in% Vars)
   return(var_rcd)
 }
-
+var_list <- as.data.frame(Risk_tbl)[c(Vars),2]
 var_rcd <- get_disclosures(Vars)
 
   F.disc_rows <- nrow(var_rcd)
@@ -175,7 +175,7 @@ var_rcd <- get_disclosures(Vars)
 ```
 
 
-In total, `r F.disc_rows` records were returned for `r topic` (`r df_srf[Vars,10]`).    
+In total, `r F.disc_rows` records were returned for `r topic` (`r var_list`).    
 This includes disclosures for `r G.Px_var` Families.  
 
 Distribution of disclosures `r kable(Px_var_dist)`
@@ -184,17 +184,19 @@ Distribution of disclosures `r kable(Px_var_dist)`
 ##### B, C and D. Find HV records, label and return, bind
 ```{r, include=FALSE}
 
+SPSS_HV_trim <- SPSS_HV[c("Table_ID","ResearchID","date_of_visit","Count_All_Activities")]
+
   # for each site...
   get_site_data <- function(DV_rcd_df,row_num) {
     # get the ID and Date
     Px_id <- DV_rcd_df[row_num,]$ResearchID
     Date_Dsc <- DV_rcd_df[row_num,]$DateDisclosed_Single
     # get data before disclosure
-    before_df <- SPSS_HV %>% filter(ResearchID == Px_id & date_of_visit < Date_Dsc) %>% arrange(desc(date_of_visit))
+    before_df <- SPSS_HV_trim %>% filter(ResearchID == Px_id & date_of_visit < Date_Dsc) %>% arrange(desc(date_of_visit))
     if(nrow(before_df) > 0) before_df$PreHV <- seq.int(nrow(before_df))
     Px_Bf_cnt <- nrow(before_df)
     # get data at disclosure
-    at_df <- SPSS_HV %>% filter(ResearchID == Px_id & date_of_visit == Date_Dsc) %>% arrange(desc(date_of_visit))
+    at_df <- SPSS_HV_trim %>% filter(ResearchID == Px_id & date_of_visit == Date_Dsc) %>% arrange(desc(date_of_visit))
     if(nrow(at_df) > 0) at_df$PreHV <- 0
     Px_At_cnt <- nrow(at_df)
     # return the dataframe
@@ -227,7 +229,6 @@ var_rcd$Px_Bf_cnt <- Px_Bf_cnt
 var_rcd$Px_At_cnt <- Px_At_cnt
 #move Px_.._cnt columns to front
 var_rcd <- var_rcd[c(37,38,1:36)]
-fetched_data <- fetched_data[c(72,9,10,1:8,11:71)]
 
 H.All_Rows <- nrow(fetched_data)
 ```
@@ -247,7 +248,7 @@ K.Rows_Bf <- nrow(Pre_disc_act %>% filter(PreHV>0))
 
 #remove duplicates
 L.test_dups <- sum(duplicated(Pre_disc_act$Table_ID))
-Pre_disc_act <- Pre_disc_act %>% mutate(dups = duplicated(Pre_disc_act[,2:72])) %>% filter(dups==FALSE)
+Pre_disc_act <- Pre_disc_act %>% mutate(dups = duplicated(Pre_disc_act[,1:4])) %>% filter(dups==FALSE)
 M.Rows_pre_disc <- nrow(Pre_disc_act)
 
 spss2date <- function(x) as.Date(x/86400, origin = "1582-10-14")
@@ -270,7 +271,7 @@ CHECK: The difference between `r  I.Rows_pre_disc` and `r M.Rows_pre_disc` shoul
 # check there are no duplicates in fetched data
 P.test_dups <- sum(duplicated(Pre_disc_act$Table_ID))
 
-merged <- SPSS_HV %>% left_join(Pre_disc_act[c(1,2,4)], by = "Table_ID")
+merged <- SPSS_HV %>% left_join(Pre_disc_act[c(1,2,5)], by = "Table_ID")
 merged$Category <- "Normal"
 merged$Category <- as.factor(ifelse(is.na(merged$PreHV), "Normal", 
                 ifelse(merged$PreHV == 0, "At", 
@@ -294,15 +295,18 @@ NOTE: HV's should add to `r nrow(SPSS_HV)`, Participants columns will add to mor
 
 The Data table developed above has three categories for Home Visits. For this round of analyses the Home Visits which occured At and Before the disclosure have been combined into 1 group.  All Home Visits are therefore categorised as either, associated with disclosure (Ass) or not associated with disclosure (normal).
 
-2x2 contingency table for `r topic`.
+2x2 contingency table for `r topic` and activity mat_well_4.
 
 ```{r, include=FALSE}
 #pre data table
 temp <- merged %>% select(Bi_Categ,inf_well_1:env_res_5,planning_1:tools_9)
 
-eg <- temp %>% group_by(Bi_Categ, planning_4) %>% summarise(n=n()) %>% spread(planning_4,n)
+eg <- temp %>% group_by(Bi_Categ, mat_well_4) %>% summarise(n=n()) %>% spread(mat_well_4,n)
   perc_yes_ass <- round(eg[1,3]/(eg[1,3]+eg[1,2])*100, digits = 2)
   perc_yes_norm <- round((eg[2,3])/(eg[2,3]+eg[2,2])*100, digits = 2)
+eg <- rbind(data.frame(eg), data.frame(Bi_Categ="Total",t(colSums(eg[,-1]))))
+eg$total <- rowSums(eg[,-1])
+colnames(eg)[2] <- c("No")
 ```
 
 `r kable(eg)`  
@@ -340,13 +344,14 @@ odds_ratio_val <-  odds_ratio_val[2:59,]
     
 ### Major Risks
 
+#### Drugs and Alcohol
 
 ##### A. Create table of disclosures
 ```{r, include=FALSE}
 # set varaibles
-topic <- "Drugs and alcohol"
-Vars <- c(2,14,22)
-
+topic <- "Drugs and Alcohol"
+Vars <- c(2,14,35)
+var_list <- as.data.frame(Risk_tbl)[c(Vars),2]
 var_rcd <- get_disclosures(Vars)
 
   F.disc_rows <- nrow(var_rcd)
@@ -358,7 +363,7 @@ var_rcd <- get_disclosures(Vars)
 ```
 
 
-In total, `r F.disc_rows` records were returned for `r topic` (`r df_srf[Vars,10]`).    
+In total, `r F.disc_rows` records were returned for `r topic` (`r var_list`).    
 This includes disclosures for `r G.Px_var` Families.  
 
 Distribution of disclosures `r kable(Px_var_dist)`
@@ -393,7 +398,6 @@ var_rcd$Px_Bf_cnt <- Px_Bf_cnt
 var_rcd$Px_At_cnt <- Px_At_cnt
 #move Px_.._cnt columns to front
 var_rcd <- var_rcd[c(37,38,1:36)]
-fetched_data <- fetched_data[c(72,9,10,1:8,11:71)]
 
 H.All_Rows <- nrow(fetched_data)
 ```
@@ -413,7 +417,7 @@ K.Rows_Bf <- nrow(Pre_disc_act %>% filter(PreHV>0))
 
 #remove duplicates
 L.test_dups <- sum(duplicated(Pre_disc_act$Table_ID))
-Pre_disc_act <- Pre_disc_act %>% mutate(dups = duplicated(Pre_disc_act[,2:72])) %>% filter(dups==FALSE)
+Pre_disc_act <- Pre_disc_act %>% mutate(dups = duplicated(Pre_disc_act[,1:4])) %>% filter(dups==FALSE)
 M.Rows_pre_disc <- nrow(Pre_disc_act)
 
 spss2date <- function(x) as.Date(x/86400, origin = "1582-10-14")
@@ -434,7 +438,7 @@ CHECK: The difference between `r  I.Rows_pre_disc` and `r M.Rows_pre_disc` shoul
 # check there are no duplicates in fetched data
 P.test_dups <- sum(duplicated(Pre_disc_act$Table_ID))
 
-merged <- SPSS_HV %>% left_join(Pre_disc_act[c(1,2,4)], by = "Table_ID")
+merged <- SPSS_HV %>% left_join(Pre_disc_act[c(1,2,5)], by = "Table_ID")
 merged$Category <- "Normal"
 merged$Category <- as.factor(ifelse(is.na(merged$PreHV), "Normal", 
                 ifelse(merged$PreHV == 0, "At", 
@@ -454,19 +458,6 @@ CHECK: This value should be zero: `r P.test_dups`.
 ##### G. analyse odds of activity occuring in the 3 seperate categories (Not Associated, At or Before)
 
 
-2x2 contingency table for `r topic`.
-
-```{r, include=FALSE}
-#pre data table
-temp <- merged %>% select(Bi_Categ,inf_well_1:env_res_5,planning_1:tools_9)
-
-eg <- temp %>% group_by(Bi_Categ, planning_4) %>% summarise(n=n()) %>% spread(planning_4,n)
-  perc_yes_ass <- round(eg[1,3]/(eg[1,3]+eg[1,2])*100, digits = 2)
-  perc_yes_norm <- round((eg[2,3])/(eg[2,3]+eg[2,2])*100, digits = 2)
-```
-
-`r kable(eg)`  
-  
 ```{r, include=FALSE}
 
 odds_ratio_val <- data.frame(activity=0, ass_perc=0, norm_perc=0, OddsRatio=0)
@@ -490,7 +481,10 @@ for (i in  2 : ncol(temp)) {
 odds_ratio_val <-  odds_ratio_val[2:59,]
 #print(odds_ratio_val) 
 ```
+   
+Odds Ratio table  
 
 `r kable(odds_ratio_val)`  
+  
   
 
