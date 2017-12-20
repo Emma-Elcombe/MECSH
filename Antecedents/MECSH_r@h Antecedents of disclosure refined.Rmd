@@ -4,8 +4,8 @@ author: "Emma Elcombe"
 date: "December, 2017"
 output: word_document
 params:
-   Vars: !r c(2,14,35)
-   topic: !r "Drugs and Alcohol"
+   Vars: !r c(16)
+   topic: !r "Child Protection services"
 ---
 
 ## MECSH r@h Disclosures
@@ -163,7 +163,7 @@ F. join this data to main HV table
 
 G. analyse odds of activity occurring in the 3 separate categories (Normal, At or Before)
 
-### `r params$topic`
+## `r params$topic`
 
 ##### A. Create table of disclosures
 ```{r, include=FALSE}
@@ -255,7 +255,7 @@ This includes `r colSums(Px_At_cnt)` on the day of disclosure, and `r colSums(Px
 
 #### Distribution of disclosures
 
-Of the `r F.disc_rows` records were returned for `r params$topic` (`r var_list`). There were `r sum(var_rcd$anyPreHV=="No HVs")` disclosures which occurred prior to the first HV.
+Of the `r F.disc_rows` records were returned for `r params$topic`. There were `r sum(var_rcd$anyPreHV=="No HVs")` disclosures which occurred prior to the first HV.
 
 ```{r, include=FALSE}
   Px_var <- HVs_disc %>% group_by(ResearchID) %>% summarise(count=n())
