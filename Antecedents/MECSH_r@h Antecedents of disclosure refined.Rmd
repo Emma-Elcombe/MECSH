@@ -4,13 +4,13 @@ author: "Emma Elcombe"
 date: "December, 2017"
 output: word_document
 params:
-   Vars: !r c(4,8)
-   topic: !r "Domestic Violence"
+   Vars: !r c(2,14,35)
+   topic: !r "Drugs and Alcohol"
 ---
 
 ## MECSH r@h Disclosures
 
-Set up R environment and load data home visit data (SPSS_r@h - v10), and disclosure data (srf 050917 v10)
+Set up R environment and load data home visit data (SPSS_r@h - v11), and disclosure data (srf 050917 v11)
 
 
 ```{r Setup, include = FALSE}
@@ -26,7 +26,7 @@ library(ggplot2)
 # Get data
 setwd("//ad.uws.edu.au/dfshare/HomesCMB$/30042685/My Documents/MECSH/By Site/r@h/Nurse home visit activity data")
 getwd()
-SPSS_v10 = read.spss("SPSS_r@h_June17 - v10 new fidelity.sav", to.data.frame=TRUE, use.value.labels = TRUE)
+SPSS_v11 = read.spss("SPSS_r@h_June17 - v11 merged dups.sav", to.data.frame=TRUE, use.value.labels = TRUE)
 setwd("//ad.uws.edu.au/dfshare/HomesCMB$/30042685/My Documents/MECSH/By Site/r@h/Risk Factors/Mother vulnerablity data")
 SPSS_srf = read.spss("srf 050917 v10 EE - taller v2.sav", to.data.frame=TRUE, use.value.labels = TRUE)
 setwd("C:/R")
@@ -36,13 +36,13 @@ setwd("C:/R")
 
 ```{r, include=FALSE}
 
-Px_v10 <- SPSS_v10 %>% group_by(ResearchID) %>% summarise(VisitCount=n())
+Px_v11 <- SPSS_v11 %>% group_by(ResearchID) %>% summarise(VisitCount=n())
 Px_srf <- SPSS_srf %>% group_by(ResearchID, RiskRecorded) %>% summarise(n=n()) %>% spread(RiskRecorded,n )
-A.Rows_Px_v10 <- max(row(Px_v10))
+A.Rows_Px_v11 <- max(row(Px_v11))
 B.Rows_Px_srf <- max(row(Px_srf))
 ```
 
-Number of participants in 'r@h RCT' file = `r A.Rows_Px_v10`  
+Number of participants in 'r@h RCT' file = `r A.Rows_Px_v11`  
 Number of participants in srf file = `r B.Rows_Px_srf`   
 
 
@@ -65,7 +65,7 @@ Disclosures were recorded for `r B.Rows_Px_srf - C.Px_no_risk` of the `r B.Rows_
 
 ##### Clean vulnerability data
 
-The full details of this are in the word document and SPSS data and syntax files within the directory 'C:/Users/Documents/MECSH/By Site/r@h/Risk Factors/Mother vulnerablity data'.  In short, data was included if the column 'IncludeData' equaled 'Yes'.
+The full details of this are in the word document and SPSS data and syntax files within the directory 'C:/Users/Documents/MECSH/By Site/r@h/Risk Factors/Mother vulnerability data'.  In short, data was included if the column 'IncludeData' equaled 'Yes'.
 
 ```{r, include=FALSE}
 df_srf <- SPSS_srf %>% filter(IncludeData == "Yes")
@@ -77,12 +77,14 @@ E.Rows_Px_srf <- max(row(Px_df_srf))
 
 ##### Result of cleaning
 
-Once data was cleaned to remove particiants (2) with case records too complex to work within this analysis, and records without dates (or dates which occured too early). There were `r D.Rows_df_srf` records for `r E.Rows_Px_srf` participants remaining
+Once data was cleaned to remove participants (2) with case records too complex to work with in this analysis, and records without dates (or dates which occurred too early). There were `r D.Rows_df_srf` records for `r E.Rows_Px_srf` participants remaining  
+
+NOTE: This still includes disclosures made prior to Home Visits occurring.
 
 #### Distribution of risk disclosure
 
 ```{r, echo=FALSE}
-ggplot(Px_risks, aes(x=Yes, y=n)) + geom_area(fill = "sky blue") + ggtitle("Disclosures per mother") + xlab("number of disclosures") + ylab("number of mothers")
+ggplot(Px_risks, aes(x=Yes, y=n)) + geom_col(fill = "sky blue") + ggtitle("Disclosures per mother") + xlab("number of disclosures") + ylab("number of mothers")
 
 ```
 
@@ -99,30 +101,29 @@ Risk_tbl <- Risk_tbl[c(6,1,2,3,4,5)]
 
 ```
 
-The following date was disclosed my mothers or parents to the nurse home visitors.   
+The following data was disclosed by mothers or parents to the nurse home visitors.   
 
 Risks Recorded `r kable(Risk_tbl)`
 
 
 ### Home Visit data
 
-##### Cleaning SPSS_v10 HV table
+##### Cleaning SPSS_v11 HV table
 
 ```{r, include=FALSE}
-v10_summ <- SPSS_v10 %>% select(Valid_Check_new, Valid_new) %>% group_by(Valid_Check_new, Valid_new) %>% summarise(n=n()) %>% spread(Valid_new, n)
+v11_summ <- SPSS_v11 %>% select(Valid_Check_new, Valid_new) %>% group_by(Valid_Check_new, Valid_new) %>% summarise(n=n()) %>% spread(Valid_new, n)
 #v10_summ <- rbind(v10_summ, data.frame(Valid_Check_new="Total",t(colSums(v10_summ[,-1]))))
-SPSS_HV <- SPSS_v10 %>% filter(as.numeric(Valid_Check_new) %in% c(1,6,7,8,9,10))
-Risk_tbl
+SPSS_HV <- SPSS_v11 %>% filter(as.numeric(Valid_Check_new) %in% c(1,6,7,8,9,10))
   # trim SPSS HV file
-  SPSS_HV <- SPSS_HV[c(1:10, 215:231, 251, 255:297)]
+  SPSS_HV <- SPSS_HV[c(1:10,31, 32,35,214:231, 250, 256:297)]
   sum(duplicated(SPSS_HV$Table_ID))
 ```
 
-In the Full SPSS data set from MCRI there are `r nrow(SPSS_v10)` rows of data.   
+In the Full SPSS data set from MCRI there are `r nrow(SPSS_v11)` rows of data.   
 
-`r kable(v10_summ)`  
+`r kable(v11_summ)`  
 
-After removing the records falgged as A.Missing, B.No Visit content, c.Low act, Group session and D.Failure to attend. There are `r nrow(SPSS_HV)` rows which will be considered in this analysis.  
+After removing the records flagged as A.Missing, B.No Visit content, c.Low act, Group session and D.Failure to attend. There are `r nrow(SPSS_HV)` rows which will be considered in this analysis.  
 
 
 
@@ -130,13 +131,15 @@ After removing the records falgged as A.Missing, B.No Visit content, c.Low act, 
 
 ##### aim of code
 
-Determine if the activities which occured in the HV's just prior to disclosure, or at disclosure' were different from the activities which occured at other times in the program.
+Determine if the activities which occurred in the HV's just prior to disclosure, or at disclosure' were different from the activities which occurred at other times in the program.
 
 For each disclosure determine  
- a. which rows in the HV table happened at disclosure, and  
- b. which row/s happened before
+ a. if it was made AN or PN  
+ b. if it happened prior to a Home Visit (HV occurring)  
+ c. which rows in the HV table happened at disclosure, and  
+ d. which row/s happened before
  
- Record the number the rows returned, based on their chronological date
+ Record results, based on chronological date
  allow for some rows in HV table to fall into multiple categories (as risks can be disclosed more than once by the same mother/family)
 
 
@@ -145,18 +148,20 @@ For each disclosure determine
 A. Identify all disclosures for given topic
 
 B. For each disclosure determine  
- i. which rows in the HV table happened before  
- ii. which row/s happened at the event
+ i. if it happened prior to first HV (remove if they did)  
+ ii. if it was made AN or PN  
+ iii. which rows in the HV table happened before  
+ iv. which row/s happened at the event
 
-C. return HV records and incremental counts for both searches (i and ii)
+C. return HV records and incremental counts for all searches (i to iv)
 
-D. bind two sets of records, 
+D. bind two sets of records (iii, iv), 
 
 E. delete the records which occur twice, keeping the 'At' record where possible.
 
 F. join this data to main HV table
 
-G. analyse odds of activity occuring in the 3 seperate categories (Normal, At or Before)
+G. analyse odds of activity occurring in the 3 separate categories (Normal, At or Before)
 
 ### `r params$topic`
 
@@ -174,8 +179,6 @@ age_disc <- mean(var_rcd$Age_at_Disclosure)
   F.disc_rows <- nrow(var_rcd)
   Px_var <- var_rcd %>% group_by(ResearchID) %>% summarise(count=n())
   G.Px_var <- nrow(Px_var)
-  Px_var_dist <- Px_var %>% group_by(count) %>% summarise(n=n())
-  Px_var_dist <- rbind(Px_var_dist, data.frame(count="Total",t(colSums(Px_var_dist[,-1]))))
 
 ```
 
@@ -183,15 +186,6 @@ age_disc <- mean(var_rcd$Age_at_Disclosure)
 In total, `r F.disc_rows` records were returned for `r params$topic` (`r var_list`).    
 This includes disclosures for `r G.Px_var` Families.  
 
-Distribution of disclosures `r kable(Px_var_dist)`
-
-The average age of the child at disclosure was `r age_disc`.  
-
-```{r, echo=FALSE}
-
-ggplot(var_rcd, aes(Age_at_Disclosure)) + geom_histogram(binwidth = 6, fill = "sky blue", color = "DeepSkyBlue") + labs(x="Age at Disclosure (weeks)", title = "Distribution of disclosure by child age")
-
-```
 
 
 ##### B, C and D. Find HV records, label and return, bind
@@ -238,26 +232,72 @@ for (i in seq_len(F.disc_rows)) {
       }
     } 
 
-var_rcd$Px_Bf_cnt <- Px_Bf_cnt
-var_rcd$Px_At_cnt <- Px_At_cnt
+var_rcd$Px_Bf_cnt <- as.numeric(Px_Bf_cnt)
+var_rcd$Px_At_cnt <- as.numeric(Px_At_cnt)
 #move Px_.._cnt columns to front
 var_rcd <- var_rcd[c(37,38,1:36)]
-HVs_disc <- fetched_data %>% group_by(ResearchID) %>% summarise(n=n(), max=max(PreHV))
+sum(fetched_data$PreHV==1)
+HVs_disc <- fetched_data  %>% group_by(ResearchID) %>% summarise(n=n(), max=max(PreHV))
 H.All_Rows <- nrow(fetched_data)
+
+var_rcd$anyPreHV <- as.character(ifelse(Px_At_cnt==0 & Px_Bf_cnt == 0,"No HVs","HVs"))
+age_disc <- var_rcd %>% group_by(anyPreHV) %>% summarise(count=n(), "mean age"=round(mean(Age_at_Disclosure), digits = 2), min=round(min(Age_at_Disclosure), digits = 2), max=round(max(Age_at_Disclosure), digits = 2))
+AN_disc <- sum(var_rcd$Disclosure_Age_Band=="Antenatal" & var_rcd$anyPreHV=="HVs")
+PN_disc <- sum(var_rcd$Disclosure_Age_Band!="Antenatal" & var_rcd$anyPreHV=="HVs")
+HVs_disc <- var_rcd %>% mutate(PreHVs=Px_At_cnt + Px_Bf_cnt) %>% filter(PreHVs>0)
+
 ```
 
-In total, `r H.All_Rows` HV's occured on the day or prior to these disclosures.   
+
+In total, `r H.All_Rows` HV's occurred on the day or prior to these disclosures.   
 This includes `r colSums(Px_At_cnt)` on the day of disclosure, and `r colSums(Px_Bf_cnt)` before.  
 
-The average number of Home visits priot to disclosure was `r round(mean(HVs_disc$max), digits=3)`.  
+
+#### Distribution of disclosures
+
+Of the `r F.disc_rows` records were returned for `r params$topic` (`r var_list`). There were `r sum(var_rcd$anyPreHV=="No HVs")` disclosures which occurred prior to the first HV.
+
+```{r, include=FALSE}
+  Px_var <- HVs_disc %>% group_by(ResearchID) %>% summarise(count=n())
+  G.Px_var <- nrow(Px_var)
+  Px_var_dist <- Px_var %>% group_by(count) %>% summarise(n=n())
+  Px_var_dist <- rbind(Px_var_dist, data.frame(count="Total",t(colSums(Px_var_dist[,-1]))))
+```
+
+Not including these, there were `r F.disc_rows - sum(var_rcd$anyPreHV=="No HVs")` disclosures for `r G.Px_var` Families.  
+
+Distribution of disclosures by family `r kable(Px_var_dist)`
+
+
+
+
+#### Disclosure by Home Visits  
+
+The total number of home visits prior to (or at) disclosure was `r H.All_Rows`.  
+The average number of Home visits per family prior to disclosure was `r round(mean(HVs_disc$PreHVs), digits=2)`.  
 
 ```{r, echo=FALSE}
 
-ggplot(HVs_disc, aes(max)) + geom_histogram(binwidth = 2, fill = "sky blue", color = "DeepSkyBlue") + labs(x="HVs at Disclosure", title = "Distribution of disclosure by number of preceeding HVs") 
+ggplot(HVs_disc, aes(PreHVs)) + geom_histogram(binwidth = 2, fill = "sky blue", color = "DeepSkyBlue") + labs(x="HVs at Disclosure", title = "Distribution of disclosure by count of preceeding HVs") 
+
+```
+   
+#### Age of the child at disclosure  
+
+`r AN_disc` disclosures happened during the AN period, while `r PN_disc` disclosures happened after birth.  
+
+Child age by the existence of Previous HV's  
+`r kable(age_disc)`
+
+```{r, echo=FALSE}
+
+ggplot(var_rcd, aes(Age_at_Disclosure, fill = anyPreHV)) + geom_histogram(binwidth = 6, color = "dark blue") + labs(x="Age at Disclosure (weeks)", title = "Distribution of disclosure by child age")
 
 ```
 
-##### E. trim records and remove duplicates.
+
+
+##### E. trim HV records and remove duplicates.
 ```{r, include=FALSE}
 # filter for 'day of' and 'previous 3' records
 Pre_disc_act <- fetched_data %>% filter(PreHV <= 3) 
@@ -279,8 +319,9 @@ O.Rows_Bf <- nrow(Pre_disc_act %>% filter(PreHV>0))
 
 ```
 
-After trimming the HV records to include only visits that occured on the day of disclosure, or were one one of (up to) three vists which occured prior, there are `r  I.Rows_pre_disc` HV records. This includes `r J.Rows_At` on the day of disclosure, and `r K.Rows_Bf` before.  
-After removing the HV's that occur twice, there are `r M.Rows_pre_disc` HVs to analyse.  This includes `r N.Rows_At` on the day of disclosure, and `r O.Rows_Bf` before.  
+HV records were filtered to include only the HVs that occurred on the day of disclosure, or in one of the (up to) three visits which occurred prior.  
+This left `r  I.Rows_pre_disc` HV records, including `r J.Rows_At` on the day of disclosure, and `r K.Rows_Bf` before.  
+After removing the HV's that occur twice (due to multiple disclosures), there are `r M.Rows_pre_disc` HVs remaining to analyse.  This includes `r N.Rows_At` on the day of disclosure, and `r O.Rows_Bf` before.  
 CHECK: The difference between `r  I.Rows_pre_disc` and `r M.Rows_pre_disc` should be `r L.test_dups` (the number of duplicates).
   
     
@@ -303,19 +344,19 @@ HV_type <- rbind(HV_type, data.frame(Category="Total",t(colSums(HV_type[,-1]))))
 
 CHECK: This value should be zero: `r P.test_dups`.  
 
-This table shows the number of partipcants with HV's, and the total number of HV's in each of the 3 categories.   
+This table shows the number of participants with HV's, and the total number of HV's in each of the 3 categories.   
 `r kable(HV_type)`   
 
-NOTE: HV's should add to `r nrow(SPSS_HV)`, Participants columns will add to more than the total number of total number of partipcants as many will have HV's in mulitple categories.
+NOTE: HV's should add to `r nrow(SPSS_HV)`, Participants columns will add to more than the total number of total number of participants as many will have HV's in multiple categories.
   
-  
+### Odds Ratios  
 
 ##### G. analyse odds of activity occuring in the 3 seperate categories (Not Associated, At or Before)
 
 
-The Data table developed above has three categories for Home Visits. For this round of analyses the Home Visits which occured At and Before the disclosure have been combined into 1 group.  All Home Visits are therefore categorised as either, associated with disclosure (Ass) or not associated with disclosure (normal).
+The table shown above has three categories for Home Visits. For this round of analyses the Home Visits which occurred At and Before the disclosure have been combined into 1 group.  All Home Visits are therefore categorised as either, associated with disclosure (Ass) or not associated with disclosure (normal).
 
-2x2 contingency table for `r params$topic` and activity mat_well_4.
+example 2x2 contingency table for: `r params$topic` by activity 'mat_well_4'.
 
 ```{r, include=FALSE}
 #pre data table
@@ -331,7 +372,7 @@ colnames(eg)[2] <- c("No")
 
 `r kable(eg)`  
   
-This table has been used to generate the percentage of 'Yes' responses in the associated group (e.g. Yes/(Yes+No)*100 = `r perc_yes_ass`), and the percentage of Yes's in the Normal or not associated group = `r perc_yes_norm`.  
+The contingency table is used to generate the percentage of 'Yes' responses in the associated group (e.g. Yes/(Yes+No)*100 = `r perc_yes_ass`), and the percentage of Yes's in the Normal or not associated group = `r perc_yes_norm`.  
   
 The contingency table has also been used to determine the Odds Ratio (OR) using the formula: OR = (a/b)/(c/d) = ((Ass + Yes)/(Ass + No))/((Norm + Yes)/(Norm + No)).
 
